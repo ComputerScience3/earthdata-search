@@ -73,13 +73,21 @@ export default class CmrDatasourcePlugin {
     let collection = this._collection;
     let base = urlUtil.fullPath(`/granules/download.html?project=${projectId}&collection=${collection.id}`);
     var result = [
-      {title: "View Download Links", url: base, tooltip: 'View clickable links in browser'},
-      {title: "Download Data Links File", url: base.replace('.html', '.txt'), tooltip: 'Download text file containing data URLs'},
+      {title: "View/Download Data Links", url: base.replace('.html', '.txt'), tooltip: 'View or download data URLs'},
       {title: "Download Access Script", url: base.replace('.html', '.sh'), tooltip: 'Download executable shell script (requires UNIX environment)'}
     ];
     if (collection.browseable_granule) {
       result.push({title: "View Browse Image Links", url: `${base}&browse=true`, tooltip: 'View clickable browse links in browser'});
     }
+    return result;
+  }
+  opendapLinks(projectId) {
+    let collection = this._collection;
+    let base = urlUtil.fullPath(`/granules/opendap_urls.html?project=${projectId}&collection=${collection.id}`);
+    var result = [
+      {title: "View/Download Data Links", url: base, tooltip: 'View or download data URLs'},
+      {title: "Download Access Script", url: base.replace('.html', '.sh'), tooltip: 'Download executable shell script (requires UNIX environment)'}
+    ];
     return result;
   }
   hasQueryConfig() {

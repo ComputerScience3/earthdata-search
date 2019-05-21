@@ -1,18 +1,18 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe 'Services Access', reset: false do
+# EDSC-1778 Adding pending_updates tag until ticket is completed.
+describe 'Services Access', pending_updates: true do
   serviceable_collection_id = 'C179014698-NSIDC_ECS'
   smap_collection_id = 'C1236303848-NSIDC_ECS'
-  smap_collection_title = "SMAP L1C Radiometer Half-Orbit 36 km EASE-Grid Brightness Temperatures V003"
+  smap_collection_title = 'SMAP L1C Radiometer Half-Orbit 36 km EASE-Grid Brightness Temperatures V003'
   serviceable_collection_title = 'AMSR-E/Aqua 5-Day L3 Global Snow Water Equivalent EASE-Grids V002'
   disabled_serviceable_collection_id = 'C128599377-NSIDC_ECS'
 
-  context 'when viewing data access with a collection that is not configured for ESI processing' do
+  context 'when viewing data access with a collection that is not configured for ESI processing', single_granule: true do
     before :all do
       Capybara.reset_sessions!
-      load_page :search, focus: disabled_serviceable_collection_id
-      login
-      first_granule_list_item.click_link "Configure and download single granule data"
+      load_page :search, focus: disabled_serviceable_collection_id, authenticate: 'edsc'
+      first_granule_list_item.click_link 'Configure and download single granule data'
       wait_for_xhr
     end
 
@@ -33,7 +33,7 @@ describe 'Services Access', reset: false do
         end
 
         # Cannot reliably display a progress bar using recordings
-        it 'displays an error message', pending_fixtures: true do
+        it 'displays an error message' do
           wait_for_xhr
           within '.access-error-code' do
             expect(page).to have_content('CollectionDisabled')
@@ -46,18 +46,17 @@ describe 'Services Access', reset: false do
     end
   end
 
-  context 'when viewing data access with a SMAP collection that is capable of zone subsetting' do
+  context 'when viewing data access with a SMAP collection that is capable of zone subsetting', single_granule: true do
     before :all do
       Capybara.reset_sessions!
-      load_page :search, focus: smap_collection_id
-      login
-      first_granule_list_item.click_link "Configure and download single granule data"
+      load_page :search, focus: smap_collection_id, authenticate: 'edsc'
+      first_granule_list_item.click_link 'Configure and download single granule data'
     end
 
-    context "when submitting the ESI service access method for two consecutive times" do
+    context 'when submitting the ESI service access method for two consecutive times' do
       before :all do
         # first time, the ESI option should not be selected and the form should not be auto populated.
-        expect(page).not_to have_content("Reformat Output (Optional)")
+        expect(page).not_to have_content('Reformat Output (Optional)')
         choose 'Customize Product'
         wait_for_xhr
         fill_in 'Email Address', with: "patrick+edsc@element84.com\t"
@@ -68,7 +67,7 @@ describe 'Services Access', reset: false do
         click_on 'Submit'
 
         # Second time, the ESI form is now prepopulated
-        click_link 'Back to Data Access Options'
+        click_link 'Back to Project'
         wait_for_xhr
         click_on 'Continue'
         click_on 'Submit'
@@ -76,8 +75,8 @@ describe 'Services Access', reset: false do
 
       context 'and returning to the retrieval page after the service is complete' do
         before :all do
-          visit "/data/status"
-          within("table.data-retrievals tbody tr:first-child") do
+          load_page '/data/status'
+          within('table.data-retrievals tbody tr:first-child') do
             click_on smap_collection_title
           end
           wait_for_xhr
@@ -93,12 +92,11 @@ describe 'Services Access', reset: false do
   context 'when viewing data access with a serviceable collection' do
     before :all do
       Capybara.reset_sessions!
-      load_page :search, focus: serviceable_collection_id
-      login
-      fill_in "granule-ids", with: "AMSR_E_L3_5DaySnow_V10_20110928.hdf, AMSR_E_L3_5DaySnow_V10_20110923.hdf, AMSR_E_L3_5DaySnow_V10_20110918.hdf, AMSR_E_L3_5DaySnow_V10_20110913.hdf, AMSR_E_L3_5DaySnow_V10_20110908.hdf, AMSR_E_L3_5DaySnow_V10_20110903.hdf, AMSR_E_L3_5DaySnow_V10_20110829.hdf, AMSR_E_L3_5DaySnow_V10_20110824.hdf, AMSR_E_L3_5DaySnow_V10_20110819.hdf, AMSR_E_L3_5DaySnow_V10_20110814.hdf, AMSR_E_L3_5DaySnow_V10_20110809.hdf, AMSR_E_L3_5DaySnow_V10_20110804.hdf\t"
+      load_page :search, focus: serviceable_collection_id, authenticate: 'edsc'
+      fill_in 'granule-ids', with: "AMSR_E_L3_5DaySnow_V10_20110928.hdf, AMSR_E_L3_5DaySnow_V10_20110923.hdf, AMSR_E_L3_5DaySnow_V10_20110918.hdf, AMSR_E_L3_5DaySnow_V10_20110913.hdf, AMSR_E_L3_5DaySnow_V10_20110908.hdf, AMSR_E_L3_5DaySnow_V10_20110903.hdf, AMSR_E_L3_5DaySnow_V10_20110829.hdf, AMSR_E_L3_5DaySnow_V10_20110824.hdf, AMSR_E_L3_5DaySnow_V10_20110819.hdf, AMSR_E_L3_5DaySnow_V10_20110814.hdf, AMSR_E_L3_5DaySnow_V10_20110809.hdf, AMSR_E_L3_5DaySnow_V10_20110804.hdf\t"
       wait_for_xhr
 
-      click_button "Download Data"
+      click_button 'Download All'
       wait_for_xhr
     end
 
@@ -123,20 +121,20 @@ describe 'Services Access', reset: false do
           click_on 'Submit'
         end
 
-        it 'displays a progress bar while the service is processing', pending_fixtures: true do
+        it 'displays a progress bar while the service is processing' do
           synchronize(120) do
-            expect(page).to have_content("Processing") unless page.has_content?("Complete")
+            expect(page).to have_content('Processing') unless page.has_content?('Complete')
           end
         end
 
         context 'when returning to the retrieval page after a service is complete' do
           before :all do
-            visit "/data/status"
+            load_page '/data/status'
             click_on serviceable_collection_title
             wait_for_xhr
           end
 
-          it 'displays download urls', pending_fixtures: true do
+          it 'displays download urls' do
             expect(page).to have_content('Complete')
           end
         end

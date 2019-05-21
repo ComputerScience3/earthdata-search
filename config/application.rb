@@ -19,6 +19,8 @@ module EarthdataSearchClient
     config.autoload_paths += Dir["#{config.root}/app/services", "#{config.root}/app/services/**/"]
     config.eager_load_paths += Dir["#{config.root}/app/services", "#{config.root}/app/services/**/"]
 
+    config.action_dispatch.default_headers['X-Frame-Options'] = "DENY"
+
     # Only load the plugins named here, in the order given (default is alphabetical).
     # :all can be used as a placeholder for all plugins not explicitly named.
     # config.plugins = [ :exception_notification, :ssl_requirement, :all ]
@@ -51,6 +53,9 @@ module EarthdataSearchClient
 
     # Enable the asset pipeline
     config.assets.enabled = true
+
+    # Configure ActiveJob to use DelayedJob
+    config.active_job.queue_adapter = :delayed_job
 
     config.is_plugin = Proc.new do |path|
       !%w(.css .map).include?(File.extname(path)) && File.basename(path).start_with?('edsc-plugin.')
@@ -121,5 +126,12 @@ module EarthdataSearchClient
     config.enable_esi_order_chunking = (ENV['enable_esi_order_chunking'] || services['edsc'][Rails.env.to_s]['enable_esi_order_chunking'].to_s) == 'true'
     config.cmr_tag_namespace = ENV['cmr_tag_namespace'] || 'edsc'
     config.thumbnail_width = 75
+
+    # UMM Versions
+    config.umm_c_version   = '1.12'
+    config.umm_s_version   = '1.2'
+    config.umm_var_version = '1.2'
+
+    config.ous_version = 'v2.1'
   end
 end

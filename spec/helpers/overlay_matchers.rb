@@ -1,5 +1,5 @@
 module OverlayUtil
-  OVERLAY_IDS = ['project-overview', 'collection-results', 'collection-details', 'granule-details', 'master-overlay-parent', 'granule-search', 'granule-list']
+  OVERLAY_IDS = ['collection-results', 'collection-details', 'granule-details', 'master-overlay-parent', 'granule-search', 'granule-list']
 
   def self.has_visible_overlay_content?(page, id)
     collections_overlay_visible?(page) && current_overlay_id(page).include?(id)
@@ -10,16 +10,16 @@ module OverlayUtil
   end
 
   def self.current_overlay_id(page)
-    main_id = page.evaluate_script """
+    main_id = page.execute_script """
       var $content = $('.master-overlay-main-content');
       var level = parseInt($content.attr('data-level'), 10);
-      $content.children(':visible')[level].id
+      return $content.children(':visible')[level].id
     """
     if page.has_css?('#collections-overlay:not(.is-master-overlay-secondary-hidden)')
-      secondary_id = page.evaluate_script """
+      secondary_id = page.execute_script """
         var $content = $('.master-overlay-secondary-content');
         var level = parseInt($content.attr('data-level'), 10);
-        $content.children(':visible')[level].id
+        return $content.children(':visible')[level].id
       """
     else
       secondary_id = nil
@@ -50,11 +50,10 @@ module OverlayUtil
 
   def self.define_visible_overlay_matcher_for_id(id)
     RSpec::Matchers.define "have_visible_#{id.underscore}" do
-      match_for_should     { |page| OverlayUtil::expect_visible_overlay_content!(page, id, true)  }
-      match_for_should_not { |page| OverlayUtil::expect_visible_overlay_content!(page, id, false) }
+      match { |page| OverlayUtil::expect_visible_overlay_content!(page, id, true) }
+      match_when_negated { |page| OverlayUtil::expect_visible_overlay_content!(page, id, false) }
     end
   end
 end
-
 
 OverlayUtil::define_overlay_matchers()

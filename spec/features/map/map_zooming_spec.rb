@@ -1,48 +1,14 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe 'Map Zooming', reset: false do
-  before :all do
-    page.driver.resize_window(1680, 1050) # Default capybara window size
-    Capybara.reset_sessions!
+describe 'Map Zooming' do
+  before :each do
     load_page :search
   end
 
-  after :all do
-    page.driver.resize_window(1280, 1024)
-  end
-
-  # context 'when zooming with the mouse scroll wheel' do
-  #   before :all do
-  #     # zoom in with mouse
-  #     script = '''
-  #       # couldn't find anything that worked here
-  #     '''
-  #     page.evaluate_script script
-  #   end
-  #
-  #   after :all do
-  #     # zoom out with mouse
-  #     expect(page).to have_query_string('m=0!0!2!1')
-  #   end
-  #
-  #   it 'zooms to the mouse location' do
-  #     expect(page).to have_query_string('m=15!15!3!1')
-  #   end
-  # end
-
   context 'when zooming with the zoom buttons' do
     context 'and the overlay is visible' do
-      before :all do
-        load_page :search
+      before :each do
         find('.leaflet-control-zoom-in').click
-        wait_for_xhr
-        sleep 0.2 # Allow animations to finish and avoid clickfailed
-      end
-
-      after :all do
-        find('.leaflet-control-zoom-out').click
-        wait_for_xhr
-        expect(page).to have_map_center(0, 0, 2)
       end
 
       it 'zooms to the center of the visible map' do
@@ -51,25 +17,14 @@ describe 'Map Zooming', reset: false do
     end
 
     context 'and the overlay is minimized' do
-      before :all do
+      before :each do
         within '.master-overlay-main' do
           find('.master-overlay-minimize').click
         end
+
         zoom_level = MapUtil.get_zoom(page)
         find('.leaflet-control-zoom-in').click
-        wait_for_zoom_animation zoom_level
-      end
-
-      after :all do
-        synchronize(30) do
-          # Synchronize because animations can cause occlusion if execution is very fast
-          zoom_level = MapUtil.get_zoom(page)
-          find('.leaflet-control-zoom-out').click
-          wait_for_zoom_animation zoom_level
-          find('.master-overlay-maximize').click
-        end
-        wait_for_xhr
-        expect(page).to have_map_center(0, 0, 2)
+        wait_for_zoom_animation(zoom_level + 1)
       end
 
       it 'zooms to the center of the visible map' do
@@ -80,9 +35,7 @@ describe 'Map Zooming', reset: false do
 
   context 'when using the zoom home button' do
     context 'with spatial bounds' do
-      before :all do
-        load_page :search
-        wait_for_xhr
+      before :each do
         script = "$('#map').data('map').map.fitBounds([{lat: -40, lng:0}, {lat: -20, lng: 0}]);"
         page.execute_script(script)
 
@@ -91,61 +44,38 @@ describe 'Map Zooming', reset: false do
         find('.leaflet-control-zoom-home').click
       end
 
-      after :all do
-        click_on 'Clear Filters'
-        script = "$('#map').data('map').map.setView([0, 0], 2);"
-        page.execute_script(script)
-        expect(page).to have_map_center(0, 0, 2)
-      end
-
-      it "centers the map over the spatial area" do
+      it 'centers the map over the spatial area' do
         expect(page).to have_map_center(10, 10, 4)
       end
     end
 
     context 'without spatial bounds' do
-      before :all do
+      before :each do
         script = "$('#map').data('map').map.fitBounds([{lat: -40, lng:-10}, {lat: -20, lng: -10}]);"
         page.execute_script(script)
 
         find('.leaflet-control-zoom-home').click
       end
 
-      after :all do
-        script = "$('#map').data('map').map.setView([0, 0], 2);"
-        page.execute_script(script)
-        expect(page).to have_map_center(0, 0, 2)
-      end
-
-      it "centers the map at (0,0)" do
+      it 'centers the map at (0,0)' do
         expect(page).to have_map_center(0, 0, 2)
       end
     end
 
-    context "on polar view" do
-      
-      before :all do
-        find("#collection-results").find_link("Minimize").click
+    context 'on polar view' do
+      before :each do
+        find('#collection-results').find_link('Minimize').click
         wait_for_xhr
-      end
-      after :all do
-        click_on "Geographic (Equirectangular)"
-        find_by_id("collection-results").find_link("Maximize").click
-        wait_for_xhr
-        script = "$('#map').data('map').map.setView([0, 0], 2);"
-        page.execute_script(script)
-        wait_for_xhr
-        expect(page).to have_map_center(0, 0, 2)
       end
 
-      it "centers the map at (90, 0) for north polar view" do
-        click_on "North Polar Stereographic"
+      it 'centers the map at (90, 0) for north polar view' do
+        click_on 'North Polar Stereographic'
         wait_for_xhr
         expect(page).to have_map_center(90, 0, 0)
       end
 
-      it "centers the map at (-90, 0) for south polar view" do
-        click_on "South Polar Stereographic"
+      it 'centers the map at (-90, 0) for south polar view' do
+        click_on 'South Polar Stereographic'
         wait_for_xhr
         expect(page).to have_map_center(-90, 0, 0)
       end
@@ -154,28 +84,15 @@ describe 'Map Zooming', reset: false do
 
   context 'on geo view' do
     context 'at the minimum zoom level' do
-      before :all do
-        load_page :search
-        click_on "Geographic (Equirectangular)"
+      before :each do
+        click_on 'Geographic (Equirectangular)'
         MapUtil.set_zoom(page, 0)
       end
 
-      after :all do
-        find('.leaflet-control-zoom-home').click
-        wait_for_zoom_animation(2)
-        wait_for_xhr
-      end
-
       context 'clicking zoom out' do
-        before :all do
+        before :each do
           find('.leaflet-control-zoom-out').click
           wait_for_zoom_animation(0)
-          wait_for_xhr
-        end
-
-        after :all do
-          find('.leaflet-control-zoom-home').click
-          wait_for_zoom_animation(2)
           wait_for_xhr
         end
 
@@ -190,53 +107,36 @@ describe 'Map Zooming', reset: false do
     end
 
     context 'at the maximum zoom level' do
-      before :all do
-        MapUtil.set_zoom(page, 7)
-      end
-
-      after :all do
-        find('.leaflet-control-zoom-home').click
-        wait_for_zoom_animation(2)
+      before :each do
+        MapUtil.set_zoom(page, 8)
       end
 
       context 'clicking zoom out' do
-        before :all do
+        before :each do
           find('.leaflet-control-zoom-in').click
-          wait_for_zoom_animation(7)
-        end
-
-        after :all do
-          find('.leaflet-control-zoom-home').click
-          wait_for_zoom_animation(2)
+          wait_for_zoom_animation(8)
         end
 
         it 'maintains the map center' do
-          expect(page).to have_map_center(0, 0, 7)
+          expect(page).to have_map_center(0, 0, 8)
         end
 
         it 'does not zoom in any further' do
-          expect(MapUtil.get_zoom(page)).to eql(7)
+          expect(MapUtil.get_zoom(page)).to eql(8)
         end
       end
     end
   end
 
-
-
-  context 'on polar view (e.g. EPSG3031 - South Polar Stereographic)' do
+  context 'on north polar view ' do
     context 'at the maximum zoom level' do
-      before :all do
-        load_page :search
-        click_on "North Polar Stereographic"
+      before :each do
+        click_on 'North Polar Stereographic'
         MapUtil.set_zoom(page, 4)
       end
 
-      after :all do
-        click_on "Geographic (Equirectangular)"
-      end
-
       context 'clicking zoom in' do
-        before :all do
+        before :each do
           find('.leaflet-control-zoom-in').click
         end
 
@@ -245,7 +145,30 @@ describe 'Map Zooming', reset: false do
         end
 
         it 'maintains the map center' do
-          expect(page).to have_map_center(90, -45, 4)
+          expect(page).to have_map_center(90, 0, 4)
+        end
+      end
+    end
+  end
+
+  context 'on south polar view ' do
+    context 'at the maximum zoom level' do
+      before :each do
+        click_on 'South Polar Stereographic'
+        MapUtil.set_zoom(page, 4)
+      end
+
+      context 'clicking zoom in' do
+        before :each do
+          find('.leaflet-control-zoom-in').click
+        end
+
+        it 'does not zoom in any further' do
+          expect(MapUtil.get_zoom(page)).to eql(4)
+        end
+
+        it 'maintains the map center' do
+          expect(page).to have_map_center(-90, 0, 4)
         end
       end
     end

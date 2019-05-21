@@ -24,8 +24,8 @@ RSpec::Matchers.define :have_highlighted_selection do |start, stop|
     stop_time = stop.to_time.to_i * 1000
 
     synchronize do
-      start_pos = page.evaluate_script "$('#timeline').timeline('timeToPosition', #{start_time})"
-      stop_pos = page.evaluate_script "$('#timeline').timeline('timeToPosition', #{stop_time})"
+      start_pos = page.execute_script "return $('#timeline').timeline('timeToPosition', #{start_time})"
+      stop_pos = page.execute_script "return $('#timeline').timeline('timeToPosition', #{stop_time})"
       width = stop_pos - start_pos
 
       matches = page.all(".timeline-selection rect[x^=\"#{start_pos.to_s[0, 2]}\"][width^=\"#{width.to_s[0, 2]}\"]")
@@ -55,7 +55,7 @@ RSpec::Matchers.define :have_timeline_range do |start, stop|
     end
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     actual_start_time = page.evaluate_script "$('#timeline').timeline('startTime')"
     actual_start_time = Time.at(actual_start_time / 1000).utc.to_datetime if actual_start_time.present?
     actual_end_time = page.evaluate_script "$('#timeline').timeline('endTime')"
@@ -82,7 +82,7 @@ RSpec::Matchers.define :have_end_time do |dt|
     true
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     expected_end_time = Time.now + dt
     actual_end_time = page.evaluate_script "$('#timeline').timeline('endTime')"
     actual_end_time = Time.at(actual_end_time / 1000).utc.to_datetime if actual_end_time.present?
@@ -98,11 +98,9 @@ RSpec::Matchers.define :have_time_offset do |selector, dt|
     synchronize do
       expected_dx = page.evaluate_script "-$('#timeline').timeline('timeSpanToPx', #{expected_dt_ms});"
 
-      actual_dx = page.evaluate_script """
-        (function() {
-          var transform = $('#timeline').find('#{selector}').attr('transform');
-          return (transform && transform.length > 0) ? parseInt(transform.replace('translate(', ''), 10) : (-1234 + 48);
-        })();
+      actual_dx = page.execute_script """
+        var transform = $('#timeline').find('#{selector}').attr('transform');
+        return (transform && transform.length > 0) ? parseInt(transform.replace('translate(', ''), 10) : (-1234 + 48);
       """
 
       # No rounding
@@ -121,8 +119,8 @@ RSpec::Matchers.define :have_focused_time_span do |start, stop|
   match do |page|
     expected_start_time = start.to_time.to_i * 1000
     expected_end_time = stop.to_time.to_i * 1000
-    expected_start_px = page.evaluate_script "$('#timeline').timeline('timeToPosition', #{expected_start_time});"
-    expected_end_px = page.evaluate_script "$('#timeline').timeline('timeToPosition', #{expected_end_time});"
+    expected_start_px = page.execute_script " return $('#timeline').timeline('timeToPosition', #{expected_start_time});"
+    expected_end_px = page.execute_script " return $('#timeline').timeline('timeToPosition', #{expected_end_time});"
 
     expect(page).to have_selector("rect[width^=\"#{(expected_start_px + 100000).to_i}\"]")
     expect(page).to have_selector("rect[x^=\"#{expected_end_px.to_i}\"]")
@@ -165,7 +163,7 @@ RSpec::Matchers.define :have_temporal do |start, stop, range=nil, collection_n=n
     true
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     script = "(function(temporal) {"
     script += "  return temporal.queryCondition();"
 
@@ -180,7 +178,6 @@ RSpec::Matchers.define :have_temporal do |start, stop, range=nil, collection_n=n
     "expected a temporal range of #{start} - #{stop}, got #{actual}"
   end
 end
-
 
 RSpec::Matchers.define :have_no_temporal do |collection_n=nil|
   match do |page|

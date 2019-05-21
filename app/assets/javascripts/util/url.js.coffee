@@ -112,12 +112,14 @@ this.edsc.util.url = do(window
   compressors = [
     new ParamNameCompressor('placename', 'qp')
     new ParamNameCompressor('temporal', 'qt')
+    new ParamNameCompressor('override_temporal', 'ot')
     new ParamNameCompressor('free_text', 'q')
     new ParamNameCompressor('original_keyword', 'ok')
     new ParamNameCompressor('point', 'sp')
     new ParamNameCompressor('bounding_box', 'sb')
     new ParamNameCompressor('line', 'sl')
     new ParamNameCompressor('line', 'sg')
+    new ParamNameCompressor('shapefile_id', 'sf')
     new ParamNameCompressor('all_collections', 'ac')
 
     new ParamFlattener(['two_d_coordinate_system', 'name'], 's2n')
@@ -139,12 +141,14 @@ this.edsc.util.url = do(window
     new ChildCompressor('pg', new ParamNameCompressor('orbit_number', 'on'))
     new ChildCompressor('pg', new ParamNameCompressor('equator_crossing_longitude', 'ecl'))
     new ChildCompressor('pg', new ParamNameCompressor('equator_crossing_date', 'ecd'))
+    new ChildCompressor('pg', new ParamNameCompressor('variables', 'uv'))
     new ChildCompressor('pg', new ArrayJoiner('readable_granule_name', 'id'))
     new ChildCompressor('pg', new ArrayJoiner('readable_granule_name', 'ur'))
     new ChildCompressor('pg', new ParamFlattener(['exclude', 'echo_granule_id'], 'x'))
     new ChildCompressor('pg', new ParamFlattener(['exclude', 'cwic_granule_id'], 'cx'))
     new ChildCompressor('pg', new CmrGranuleIdListCompressor('x'))
     new ChildCompressor('pg', new CwicGranuleIdListCompressor('cx'))
+    new ChildCompressor('pg', new ParamNameCompressor('output_format', 'of'))
   ]
 
 #   new ParamFlattener(['science_keywords_h', '0', 'category'], 'fsc', false)
@@ -185,6 +189,11 @@ this.edsc.util.url = do(window
   realQuery = ->
     realPath().split('?')[1] ? ''
 
+  projectId = ->
+    return deparam(realQuery()).projectId if realQuery() != ''
+
+    realPath().match(/\/projects\/(\d+)$/)?[1]
+
   savedPath = null
   savedId = null
   savedName = null
@@ -208,7 +217,7 @@ this.edsc.util.url = do(window
     ajax
       method: 'get'
       dataType: 'json'
-      url: "/projects/#{id}"
+      url: "/projects/#{id}.json"
       success: (data) ->
         if params.length > 0
           prefix = '&'
@@ -245,7 +254,10 @@ this.edsc.util.url = do(window
         console.log "Saved project #{id}"
         console.log "Path: #{path}"
         savedId = data
-        History.pushState(state, document.title, fullPath("/#{path.split('?')[0]}?projectId=#{savedId}"))
+        if path.split('?')[0].match(/\/projects\/\d+/)
+          History.pushState(state, document.title, fullPath("/projects/#{savedId}"))
+        else
+          History.pushState(state, document.title, fullPath("/#{path.split('?')[0]}?projectId=#{savedId}"))
         $(document).trigger('edsc.saved') if workspaceName?
 
 
@@ -259,6 +271,12 @@ this.edsc.util.url = do(window
         result = savedPath
       else
         fetchId(id, param(params))
+    else if path.match(/\/projects\/(\d+)\??.*/)
+      id = path.match(/\/projects\/(\d+)\??.*/)[1]
+      if savedPath? && savedId == id
+        result = savedPath
+      else
+        fetchId(id, [])
     else
       result = path
     result = result.replace(/^\/#/, '/') if result? # IE 9 bug with URL hashes
@@ -332,6 +350,7 @@ this.edsc.util.url = do(window
     pushPath: pushPath
     saveState: saveState
     realQuery: realQuery
+    projectId: projectId
     cleanPath: cleanPath
     currentParams: currentParams
     currentQuery: currentQuery

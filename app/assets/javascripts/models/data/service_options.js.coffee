@@ -5,7 +5,7 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
   class SubsetOptions
     constructor: (@config) ->
       @parameters = for parameter in @config.parameters
-        extend({selected: ko.observable(true)}, parameter)
+        extend({ selected: ko.observable(true) }, parameter)
 
       @formats = @config.formats
 
@@ -19,7 +19,7 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
       @subsetToSpatial = ko.observable(true)
 
     serialize: ->
-      result = {format: @formatName()}
+      result = { format: @formatName() }
       if @format()?.canSubset
         result.spatial = @config.spatial if @subsetToSpatial()
         result.parameters = (p.id for p in @parameters when p.selected())
@@ -31,19 +31,9 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
   class ServiceOptions
     constructor: (method, @availableMethods) ->
       @method = ko.observable(method)
+      @methodType = ko.observable('')
       @isValid = ko.observable(true)
       @loadForm = ko.observable(false)
-      @loadingForm = ko.computed (item, e) =>
-        if @loadForm()
-          timer = setTimeout((=>
-            if document.getElementsByClassName('access-form')[0].children.length > 0
-              @loadForm(false)
-              clearTimeout timer
-            else
-              @loadForm(true)
-          ), 0)
-          @loadForm()
-        false
 
       @subsetOptions = ko.observable(null)
       @prepopulatedFields = ko.computed(@_computePrepopulatedFields, this, deferEvaluation: true)
@@ -61,21 +51,28 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
           @subsetOptions(null)
         result
 
-    showSpinner: (item, e)=>
+      @method.subscribe =>
+        if @availableMethods
+          for available in @availableMethods when available.name == @method()
+            @methodType(available.type)
+
+    showSpinner: (item, e) =>
+      @loadForm(true)
       clickedMethod = null
       for m in @availableMethods when m.name == item.name
         clickedMethod = m
         break
-      echoformContainer = $('#' + $('#' + e.target.id).attr('form'))
-      echoformContainer.empty?() if echoformContainer?
-      if clickedMethod.type == 'service' || clickedMethod.type == 'order'
-        @loadForm(true) if clickedMethod.type == 'service'
-        setTimeout (=>
-          ko.applyBindingsToNode(echoformContainer, {echoform: this})
-          @loadForm(false)), 0
-      else
-        ko.cleanNode(echoformContainer);
-        @loadForm(false)
+
+      if e.target.id
+        echoformContainer = $('#' + $('#' + e.target.id).attr('form'))
+        if clickedMethod.type == 'service' || clickedMethod.type == 'order'
+          setTimeout (=>
+            ko.applyBindingsToNode(echoformContainer, { echoform: this })
+            @loadForm(false)), 0
+        else
+          ko.cleanNode(echoformContainer)
+          @loadForm(false)
+      @loadForm(false)
       true
 
     _computePrepopulatedFields: ->
@@ -87,16 +84,21 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
 
     serialize: ->
       method = @method()
-      result = {method: method, model: @model, rawModel: @rawModel}
+      result = { method: method, model: @model, rawModel: @rawModel }
       for available in @availableMethods
         if available.name == method
           result.type = available.type
           result.id = available.id
+
+          # Don't save model and rawModel if using download
+          if method.toLowerCase() == 'download'
+            result.model = available.model
+            result.rawModel = available.rawModel
           break
       result.subset = @subsetOptions()?.serialize()
       result
 
-    fromJson: (jsonObj, index=0) ->
+    fromJson: (jsonObj, index = 0) ->
       @method(jsonObj.method)
       @model = jsonObj.model
       @modelInitialValue = jsonObj.model
@@ -108,12 +110,12 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
       if jsonObj.type == 'service' || jsonObj.type == 'order'
         echoformContainer = null
         checkExistsTimer = setInterval (=>
-          echoformContainers = document.getElementsByClassName('access-form')
-          if echoformContainers?.length > 0
+          @echoformContainers = document.getElementsByClassName('access-form')
+          if @echoformContainers?.length > 0
             clearTimeout checkExistsTimer
             setTimeout (=>
               accessMethodMatched = false
-              for echoformContainer in echoformContainers
+              for echoformContainer in @echoformContainers
                 matches = echoformContainer.id.match(/access-form-(.*)-(\d+)/)
                 if !accessMethodMatched && matches[1] == jsonObj.collection_id && parseInt(matches[2], 10) == index
                   accessMethodMatched = true
@@ -131,7 +133,10 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
         ), 0
 
       @orderId = jsonObj.order_id
-      @orderStatus = jsonObj.order_status
+
+      # Default the order_status to `creating` as of EDSC-2058. On page load we
+      # immediately ping the endpoint to update the value
+      @orderStatus = jsonObj.order_status || 'creating'
       @errorCode = jsonObj.error_code
       @errorMessage = jsonObj.error_message
       @droppedGranules = jsonObj.dropped_granules
@@ -172,13 +177,23 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
         (availableMethods.length == 1 && availableMethods[0].type != 'download'))
 
     _computeIsReadyToDownload: ->
+      # Return false if the accessMethods have not finished loading
       return false unless @isLoaded()
-      return true if @granuleAccessOptions().methods?.length == 0
-      
+
+      # Return true if no accessMethods are present
+      if @granuleAccessOptions().methods?.length == 0
+        return true
+
       result = false
       for m in @accessMethod()
-        result = true if m.method()? && m.isValid()
-        result = true if !m.loadForm()
+        result = true if (m.isValid() && !m.loadForm()) && m.method()?
+
+      if result
+        # The submit button defaults to having a title that informs the user
+        # that they need to select an accessMethod, this clears that when a
+        # valid accessMethod has been selected
+        $('.access-submit').prop('title', "")
+
       result
 
     addAccessMethod: =>
@@ -188,13 +203,14 @@ ns.ServiceOptions = do (ko, edsc = @edsc, KnockoutModel = @edsc.models.KnockoutM
       @accessMethod.remove(method)
 
     serialize: ->
-      {accessMethod: (m.serialize() for m in @accessMethod())}
+      { accessMethod: (m.serialize() for m in @accessMethod()) }
 
     fromJson: (jsonObj) ->
       @accessMethod.removeAll()
-      for json, i in jsonObj.accessMethod
+      for json in jsonObj.accessMethod
         method = new ServiceOptions(null, @_methods)
-        method.fromJson(json, i)
+        index = @_methods?.findIndex((element) -> element.name == json.method)
+        method.fromJson(json, index)
         @accessMethod.push(method)
       this
 

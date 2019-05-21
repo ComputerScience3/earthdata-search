@@ -12,19 +12,59 @@ module Echo
       get('/opensearch')
     end
 
+    ##
+    # Search methods
+    ##
     def get_collections(options = {}, token = nil)
-      format = options.delete(:format) || 'json'
-      query = options_to_collection_query(options).merge(include_has_granules: true, include_granule_counts: true)
-      get("/search/collections.#{format}", query, token_header(token))
+      stringified_options = options.stringify_keys
+      query = options_to_collection_query(stringified_options).merge(include_has_granules: true, include_granule_counts: true)
+
+      format = stringified_options.delete('format') || 'json'
+      headers = token_header(token).merge('Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_c_version}")
+      get("/search/collections.#{format}", query, headers)
+    end
+
+    def get_variables(options = {}, token = nil)
+      stringified_options = options.stringify_keys
+
+      format = stringified_options.delete('cmr_format') || 'json'
+      headers = token_header(token).merge('Content-Type': 'application/x-www-form-urlencoded', 'Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_var_version}")
+      post("search/variables.#{format}", stringified_options.to_query, headers)
+    end
+
+    def get_services(options = {}, token = nil)
+      stringified_options = options.stringify_keys
+
+      format = stringified_options.delete('cmr_format') || 'umm_json'
+      headers = token_header(token).merge('Content-Type': 'application/x-www-form-urlencoded', 'Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_s_version}")
+      post("/search/services.#{format}", stringified_options.to_query, headers)
+    end
+
+    ##
+    # Single concept methods
+    ##
+    def get_collection(id, token = nil, format = 'umm_json')
+      get_concept(id, token: token, format: format, headers: { 'Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_c_version}" })
+    end
+
+    def get_variable(id, token = nil, format = 'umm_json')
+      get_concept(id, token: token, format: format, headers: { 'Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_var_version}" })
+    end
+
+    def get_service(id, token = nil, format = 'umm_json')
+      get_concept(id, token: token, format: format, headers: { 'Accept': "application/vnd.nasa.cmr.umm_results+json; version=#{Rails.configuration.umm_s_version}" })
+    end
+
+    # Get a single concept by concept id
+    def get_concept(id, token: nil, format: 'umm_json', headers: {})
+      headers = token_header(token).merge(headers)
+
+      get("/search/concepts/#{id}.#{format}", {}, headers)
     end
 
     def json_query_collections(query, token = nil, options = {})
       format = options.delete(:format) || 'json'
       post("/search/collections.#{format}?#{options.to_param}", query.to_json, token_header(token))
-    end
-
-    def get_collection(id, token = nil, format = 'echo10')
-      get("/search/concepts/#{id}.#{format}", {}, token_header(token))
     end
 
     def get_granules(options = {}, token = nil)
@@ -45,7 +85,7 @@ module Echo
         page_size: 1,
         sort_key: ['-start_date']
       }
-      response = get_granules(defaults.merge(options))
+      response = get_granules(defaults.merge(options), token)
       if response.success? && response.body['feed'] && response.body['feed']['entry'].present?
         response.body['feed']['entry'].first
       else
@@ -83,6 +123,7 @@ module Echo
         query_params = { include_tags: key, include_has_granules: true }
         response = json_query_collections(condition, token, query_params)
         return response unless response.success? && response.body['feed']['entry'].present?
+        return response if collection_has_tag?(response, value)
 
         entries = response.body['feed']['entry']
         entries = entries.select { |entry| entry['has_granules'] } if only_granules
@@ -127,12 +168,19 @@ module Echo
       post('/search/tags', { 'tag-key' => key }.to_json, token_header(token))
     end
 
-    def create_tag_if_needed(key, token)
-      response = get_tag(key, token)
+    def create_tags_if_needed(keys, token)
+      response = get_tag(keys, token)
+
       unless response.success? && response.body['items'].present?
-        create_tag(key, token)
+        existing_keys = response.body['items'].map { |tag| tag[:tag_key] }
+
+        keys.each do |new_tag|
+          if existing_keys.include?(new_tag)
+            puts "#{new_tag} is already a thing"
+          end
+          create_tag(new_tag, token) unless existing_keys.include?(new_tag)
+        end
       end
-      nil
     end
 
     protected
@@ -150,6 +198,16 @@ module Echo
 
     def default_headers
       { 'Client-Id' => client_id, 'Echo-ClientId' => client_id }
+    end
+
+    # Check if a collection search response includes tag_data
+    def collection_has_tag?(collection_response, tag_data)
+      collection_response.body['feed']['entry'].each do |collection|
+        collection.fetch('tags', {}).fetch('edsc.extra.gibs', {}).fetch('data', []).each do |collection_tag_data|
+          return true if collection_tag_data == JSON.parse(tag_data.to_json)
+        end
+      end
+      false
     end
   end
 end

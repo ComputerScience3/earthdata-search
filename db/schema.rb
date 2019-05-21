@@ -11,7 +11,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 20170316054224) do
+ActiveRecord::Schema.define(version: 20190228185838) do
 
   create_table "access_configurations", force: :cascade do |t|
     t.integer  "user_id"
@@ -45,6 +45,14 @@ ActiveRecord::Schema.define(version: 20170316054224) do
     t.string   "cat4",       limit: 255
     t.datetime "created_at"
     t.datetime "updated_at"
+  end
+
+  create_table "colormaps", force: :cascade do |t|
+    t.string   "product"
+    t.string   "url"
+    t.text     "jsondata"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "cron_job_histories", force: :cascade do |t|
@@ -89,6 +97,19 @@ ActiveRecord::Schema.define(version: 20170316054224) do
   add_index "delayed_jobs", ["failed_at"], name: "index_delayed_jobs_on_failed_at"
   add_index "delayed_jobs", ["priority", "run_at"], name: "delayed_jobs_priority"
 
+  create_table "orders", force: :cascade do |t|
+    t.integer  "retrieval_collection_id"
+    t.string   "type"
+    t.text     "search_params"
+    t.string   "order_number"
+    t.string   "state"
+    t.text     "order_information"
+    t.datetime "created_at",              null: false
+    t.datetime "updated_at",              null: false
+  end
+
+  add_index "orders", ["retrieval_collection_id"], name: "index_orders_on_retrieval_collection_id"
+
   create_table "projects", force: :cascade do |t|
     t.text     "path"
     t.datetime "created_at"
@@ -97,20 +118,48 @@ ActiveRecord::Schema.define(version: 20170316054224) do
     t.string   "name",       limit: 255
   end
 
+  create_table "retrieval_collections", force: :cascade do |t|
+    t.integer  "retrieval_id"
+    t.text     "access_method"
+    t.string   "collection_id"
+    t.text     "collection_metadata"
+    t.text     "granule_params"
+    t.integer  "granule_count"
+    t.datetime "created_at",          null: false
+    t.datetime "updated_at",          null: false
+  end
+
+  add_index "retrieval_collections", ["retrieval_id"], name: "index_retrieval_collections_on_retrieval_id"
+
   create_table "retrievals", force: :cascade do |t|
     t.integer  "user_id"
     t.text     "jsondata"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "token"
+    t.string   "environment"
   end
 
   add_index "retrievals", ["user_id"], name: "index_retrievals_on_user_id"
+
+  create_table "shapefiles", force: :cascade do |t|
+    t.text     "file"
+    t.string   "file_hash"
+    t.integer  "user_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+  end
+
+  add_index "shapefiles", ["user_id"], name: "index_shapefiles_on_user_id"
 
   create_table "users", force: :cascade do |t|
     t.string   "echo_id",          limit: 255
     t.text     "site_preferences"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.text     "echo_preferences"
+    t.text     "urs_profile"
+    t.text     "echo_profile"
   end
 
 end

@@ -53,7 +53,7 @@ class CollectionDetailsPresenterUmmJson < DetailsPresenterUmmJson
       doi = doi.gsub("dx.doi.org/", '')
       doi = doi.gsub("doi.org/", '')
       if !doi.blank?
-        return {doi_link: "https://dx.doi.org/#{doi}", doi_text: doi} 
+        return {doi_link: "https://dx.doi.org/#{doi}", doi_text: doi}
       else
         return {doi_text: doi, doi_link: nil}
       end
@@ -141,8 +141,8 @@ class CollectionDetailsPresenterUmmJson < DetailsPresenterUmmJson
           s += ')'
           spatial_list << s
         end
-      elsif geometry['Line']
-        lines = Array.wrap(geometry['Line'])
+      elsif geometry['Lines']
+        lines = Array.wrap(geometry['Lines'])
         lines.each do |line|
           latitude1 = line['Points'][0]['Latitude']
           longitude1 = line['Points'][0]['Longitude']
@@ -193,8 +193,7 @@ class CollectionDetailsPresenterUmmJson < DetailsPresenterUmmJson
       # exclude EDSC and Reverb URLs
       next if ru['URL'] =~ /search\.(?:sit|uat)?\.?earthdata\.nasa\.gov/ || ru['URL'] =~ /echo\.nasa\.gov/
 
-
-      format_url(ru['URL'])
+      format_url(ru['URL']) unless ru['URL'].nil?
       ru['Subtype'] = '' if ru['Subtype'].nil?
 
       if ru['URLContentType'] == 'CollectionURL'
@@ -208,12 +207,14 @@ class CollectionDetailsPresenterUmmJson < DetailsPresenterUmmJson
       end
     end
 
-    # URLs hsould be listed alphabetically and grouped by Type
+    # URLs should be listed alphabetically and grouped by Type
     related_urls.each do |url_category|
       url_category[:urls].sort_by! {|url| [url['Type'], url['Subtype'], url['URL']]}
     end
 
-    related_urls
+    # related_urls should be empty if there are no Related URLs
+    related_urls.each {|x| if (x[:urls].any?) then return related_urls end}
+    []
   end
 
   def format_url(url)

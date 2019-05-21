@@ -50,7 +50,7 @@ EarthdataSearchClient::Application.configure do
   # config.action_controller.asset_host = "http://assets.example.com"
 
   # Precompile additional assets (application.js, application.css, and all non-JS/CSS are already added)
-  config.assets.precompile += ['search.js', 'data_access.js', 'account.js', 'cwic_granule.js']
+  config.assets.precompile += ['search.js', 'data_access.js', 'account.js', 'cwic_granule.js', 'projects.js']
 
   # Disable delivery errors, bad email addresses will be ignored
   # config.action_mailer.raise_delivery_errors = false
@@ -71,17 +71,22 @@ EarthdataSearchClient::Application.configure do
 
   config.gather_metrics = true
   config.analytics_id = 'UA-50960810-3'
+  config.tag_manager_id = 'GTM-WNP7MLF'
   config.logo_name = "Lab"
   config.env_name = "[Lab]"
   config.tophat_url = "https://cdn.earthdata.nasa.gov/tophat2/tophat2.js"
   config.feedback_url = 'https://fbm.earthdata.nasa.gov/for/SearchLab/feedback.js'
 
   config.url_limit = 2000
-  config.cmr_env = 'prod'
+  config.cmr_env = 'sit'
   services = config.services
   config.urs_client_id = services['urs'][Rails.env.to_s][services['earthdata'][config.cmr_env]['urs_root']]
 
   # This is also the client ID sent to OpenSearch. It is kept the same since the OpenSearch endpoint ultimately
   # talks to ECHO/CMR.
   config.cmr_client_id = ENV['cmr_client_id'] || 'edsc-prod'
+
+
+  # Remove coloring from logs
+  config.colorize_logging = false
 end

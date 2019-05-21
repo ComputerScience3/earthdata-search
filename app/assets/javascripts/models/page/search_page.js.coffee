@@ -12,14 +12,17 @@
 #= require models/ui/state_manager
 #= require models/ui/feedback
 #= require models/ui/sitetour
-#= require models/ui/reverb_retirement
+#= require models/ui/full_facets_list
+#= require models/handoff/giovanni
 
 models = @edsc.models
 data = models.data
+handoff = models.handoff
 ui = models.ui
 ns = models.page
 
 ns.SearchPage = do (ko
+                    Page = ns.Page
                     setCurrent = ns.setCurrent
                     QueryModel = data.query.CollectionQuery
                     CollectionsModel = data.Collections
@@ -32,34 +35,33 @@ ns.SearchPage = do (ko
                     PreferencesModel = data.Preferences
                     FeedbackModel = ui.Feedback
                     SiteTourModel = ui.SiteTour
-                    ReverbRetirementModel = ui.ReverbRetirement
+                    FullFacetsListModel = ui.FullFacetsList
                     url = @edsc.util.url
-                    StateManager = ui.StateManager) ->
+                    StateManager = ui.StateManager
+                    GiovanniHandoff = handoff.GiovanniHandoff) ->
   current = null
 
   preferences = new PreferencesModel()
   sitetour = new SiteTourModel()
-  
+
   initModal = () ->
     $('#sitetourModal').modal('show') if sitetour.safePath() && (preferences.doNotShowTourAgain() == 'false' || window.location.href.indexOf('?tour=true') != -1)
 
   $(document).ready ->
-    current.map = map = new window.edsc.map.Map(document.getElementById('map'), 'geo')
+    current.map = map = new window.edsc.map.Map(document.getElementById('map'), 'geo', false, current.query)
     current.ui.granuleTimeline = new GranuleTimelineModel(current.ui.collectionsList, current.ui.projectList)
+
     $('.master-overlay').masterOverlay()
     $('.launch-variable-modal').click ->
       $('#variablesModal').modal('show')
     $('.launch-customize-modal').click ->
       $('#customizeDataModal').modal('show')
 
-    reverbRetirement = new ReverbRetirementModel()
-    if reverbRetirement.referrerIsReverb() && Cookies.get('ReadyForReverbRetirement') != 'true'
-      $('#reverbRetirementModal').modal('show')
-
     preferences.ready.done(-> initModal()) if !window.edscportal
 
-  class SearchPage
+  class SearchPage extends Page
     constructor: ->
+      super
       @query = new QueryModel()
       @collections = new CollectionsModel(@query)
       @project = new ProjectModel(@query)
@@ -72,10 +74,11 @@ ns.SearchPage = do (ko
         projectList: new ProjectListModel(@project, @collections)
         feedback: new FeedbackModel()
         sitetour: new SiteTourModel()
-        reverbRetirement: new ReverbRetirementModel()
+        fullFacetsList: new FullFacetsListModel(@query)
 
       @bindingsLoaded = ko.observable(false)
       @labs = ko.observable(false)
+      @showFocusedCollections = ko.observable(true)
 
       @spatialError = ko.computed(@_computeSpatialError)
 
@@ -90,10 +93,10 @@ ns.SearchPage = do (ko
 
     _updateFocusRenderState: (newFocus) =>
       if @_focus
-        @_focus.notifyRenderers('endSearchFocus')
+        @_focus.collection.notifyRenderers('endSearchFocus')
       @_focus = newFocus
       if @_focus
-        @_focus.notifyRenderers('startSearchFocus')
+        @_focus.collection.notifyRenderers('startSearchFocus')
 
     clearFilters: =>
       # EDSC-1448: The temporal dropdown is 'special' and needs to be programmatically closed...
@@ -109,6 +112,7 @@ ns.SearchPage = do (ko
     clearSpatial: =>
       @ui.spatialType.clearManualEntry()
       @spatialEntry.clearError()
+      @query.shapefileId(null)
       @query.spatial(null)
 
     pluralize: (value, singular, plural) ->
@@ -124,12 +128,6 @@ ns.SearchPage = do (ko
                               e.indexOf('point') != -1)
       null
 
-    hideParent: =>
-      $('.master-overlay').masterOverlay('manualHideParent')
-
-    showParent: =>
-      $('.master-overlay').masterOverlay('manualShowParent')
-
     toggleFilterStack: (data, event) =>
       $('.filter-stack').toggle()
 
@@ -141,11 +139,15 @@ ns.SearchPage = do (ko
 
     showProject: (data, event) =>
       $('#view-project').click()
-  
+
+    setFocusedFacetCategory: (focusedFacet) =>
+      @ui.fullFacetsList.selectedFacetCategory(focusedFacet)
+
   loc = window.location.pathname
   if loc.indexOf("portal") >= 0 && loc.slice(-6) != "search" && loc.slice(-1) != '/'
-    window.location.replace(loc + '/search' + window.location.search);
-  current = new SearchPage()
+    window.location.replace(loc + '/search' + window.location.search)
+
+  current = new SearchPage 'search'
   setCurrent(current)
 
   exports = SearchPage

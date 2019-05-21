@@ -1,5 +1,7 @@
 #= require models/data/granules
 #= require models/data/service_options
+#= require models/handoff/giovanni
+
 
 ns = @edsc.models.data
 
@@ -7,19 +9,20 @@ ns.Collection = do (ko
                  DetailsModel = @edsc.models.DetailsModel
                  scalerUrl = @edsc.config.browseScalerUrl
                  thumbnailWidth = @edsc.config.thumbnailWidth
-                 Granules=ns.Granules
+                 Granules = ns.Granules
                  GranuleQuery = ns.query.GranuleQuery
                  ServiceOptionsModel = ns.ServiceOptions
                  toParam=jQuery.param
                  extend=jQuery.extend
                  ajax = @edsc.util.xhr.ajax
                  dateUtil = @edsc.util.date
+                 stringUtil = @edsc.util.string
                  config = @edsc.config
+                 GiovanniHandoffModel = @edsc.models.handoff.GiovanniHandoff
                  ) ->
 
   openSearchKeyToEndpoint =
     cwic: (collection) ->
-
 
   collections = ko.observableArray()
 
@@ -39,7 +42,6 @@ ns.Collection = do (ko
 
       for collection in collections
         collection.granuleDatasourceAsync(aggregation)
-
 
     @findOrCreate: (jsonData, query) ->
       id = jsonData.id
@@ -75,9 +77,8 @@ ns.Collection = do (ko
         return available.join(", ")),
         this)
 
-
       @spatial = @computed(@_computeSpatial, this, deferEvaluation: true)
-      
+
       @timeRange = @computed(@_computeTimeRange, this, deferEvaluation: true)
       @granuleDescription = @computed(@_computeGranuleDescription, this, deferEvaluation: true)
       @granuleDatasource = ko.observable(null)
@@ -120,9 +121,32 @@ ns.Collection = do (ko
 
       @availableFilters = @computed(@_computeAvailableFilters, this, deferEvaluation: true)
       @isMaxOrderSizeReached = @computed(@_computeMaxOrderSize, this, deferEvaluation: true)
+      @isProjectCollection = ko.observable(false)
+
+    handoffUrls: (project) =>
+      urls = []
+      for tag, details of @tags() when tag.indexOf('edsc.extra.handoff') != -1
+        # Strip off just
+        handoffProvider = tag.split('.')[3]
+
+        # TODO: There has to be a pattern that allows for dynamic instantation of these objects
+        if handoffProvider == 'giovanni'
+          urls.push(new GiovanniHandoffModel(@query, this, project))
+
+      urls
+
+    handoffTags: ->
+      tag for tag, details of @tags() when tag.indexOf('edsc.extra.handoff') != -1
 
     _computeMaxOrderSize: ->
-      @id in edsc.config.asterCollections && @granuleDatasource()?.data().hits() > 100
+      hits = 0
+      hits = @granuleDatasource().data().hits() if @granuleDatasource()
+      limit = -1
+      limit = @tags()['edsc.limited_collections']['data']['limit'] if @tags() && @tags()['edsc.limited_collections']
+      if limit == -1
+        false
+      else
+        hits > limit
 
     # Since CMR doesn't support this feature, we get them from the granules that are already loaded.
     _computeAvailableFilters: ->
@@ -142,7 +166,6 @@ ns.Collection = do (ko
         break if _capabilities['day_night_flag'] && _capabilities['cloud_cover'] && _capabilities['orbit_calculated_spatial_domains']
       _capabilities
 
-    
     _computeTimeRange: ->
       if @hasAtomData()
         result = dateUtil.timeSpanToIsoDate(@time_start, @time_end)
@@ -322,6 +345,18 @@ ns.Collection = do (ko
       @_setObservable('modaps', jsonObj)
       @_setObservable('osdd_url', jsonObj)
       @_setObservable('tags', jsonObj)
+      @_setObservable('granule_hits', jsonObj)
+      @_setObservable('total_size', jsonObj)
+      @_setObservable('unit', jsonObj)
+      @_setObservable('has_spatial_subsetting', jsonObj)
+      @_setObservable('has_transforms', jsonObj)
+      @_setObservable('has_formats', jsonObj)
+      @_setObservable('has_variables', jsonObj)
+      @_setObservable('has_temporal_subsetting', jsonObj)
+      @_setObservable('associations', jsonObj)
+
+      @truncatedTitle = ko.observable(if jsonObj.title?.length > 102 then jsonObj.title.substring(0, 102) + '...' else jsonObj.title)
+
       @gibs(@getValueForTag('extra.gibs'))
 
       @nrt = jsonObj.collection_data_type == "NEAR_REAL_TIME"
@@ -332,7 +367,6 @@ ns.Collection = do (ko
 
       @_loadDatasource()
       @granuleDatasource()?.updateFromCollectionData?(jsonObj)
-
 
       if @granuleDatasourceName() && @granuleDatasourceName() != 'cmr'
         @has_granules = @canFocus()

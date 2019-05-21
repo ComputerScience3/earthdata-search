@@ -1,14 +1,10 @@
-# EDSC-195: As a user, I want to view a timeline showing granule availability so
-#           I can discover periods of time where multiple collections have matching
-#           granules
+require 'rails_helper'
 
-require "spec_helper"
-
-describe "Timeline display", reset: false do
+describe 'Timeline display' do
   extend Helpers::CollectionHelpers
 
   before :all do
-    load_page :search
+    load_page :search, authenticate: 'edsc'
   end
 
   after :each do
@@ -28,15 +24,15 @@ describe "Timeline display", reset: false do
       add_collection_to_project('C179002914-ORNL_DAAC', '30 Minute Rainfall Data (FIFE)')
       add_collection_to_project('C179003030-ORNL_DAAC', '15 Minute Stream Flow Data: USGS (FIFE)')
       add_collection_to_project('C1000000000-ORNL_DAAC', 'A Compilation of Global Soil Microbial Biomass Carbon, Nitrogen, and Phosphorus Data')
-      add_collection_to_project('C1234044620-GES_DISC', 'MLS/Aura Near-Real-Time L2 Nitric Acid (HNO3) Mixing Ratio V003 (ML2HNO3_NRT) at GES DISC')
+      add_collection_to_project('C179003620-ORNL_DAAC', 'Global Maps of Atmospheric Nitrogen Deposition, 1860, 1993, and 2050')
 
-      find("#view-project").click
+      click_on 'My Project'
 
       wait_for_xhr
     end
 
     after :all do
-      click_link("Back to Collection Search")
+      click_link('Back to Search Session')
       reset_project
     end
 
@@ -49,7 +45,7 @@ describe "Timeline display", reset: false do
 
     it 'does not display more than three collections' do
       timeline = page.find('#timeline svg')
-      expect(timeline).to have_no_selector('.C191370861-GSFCS4PA')
+      expect(timeline).to have_no_selector('.C179003620-ORNL_DAAC')
     end
 
     it 'displays times when the displayed collections have granules' do
@@ -58,11 +54,12 @@ describe "Timeline display", reset: false do
 
     context 'returning to the collection results list' do
       before :all do
-        click_link("Back to Collection Search")
+        click_link('Back to Search Session')
+        dismiss_banner
       end
 
       after :all do
-        find("#view-project").click
+        click_on 'My Project'
       end
 
       it 'hides the timeline' do
@@ -72,7 +69,8 @@ describe "Timeline display", reset: false do
   end
 
   context 'in the granule result list, coming from the collection results list' do
-    use_collection('C179003030-ORNL_DAAC', '15 Minute Stream Flow Data: USGS (FIFE)')
+    use_collection 'C179003030-ORNL_DAAC'
+
     hook_granule_results
 
     it 'displays a timeline for the single focused collection' do
@@ -93,50 +91,5 @@ describe "Timeline display", reset: false do
         expect(page).to have_no_selector('#timeline')
       end
     end
-
   end
-
-  context 'in the granule result list, coming from the project' do
-    before :all do
-      add_collection_to_project('C179003030-ORNL_DAAC', '15 Minute Stream Flow Data: USGS (FIFE)')
-
-      find("#view-project").click
-      view_granule_results('15 Minute Stream Flow Data: USGS (FIFE)', 'project-overview')
-    end
-
-    after :all do
-      leave_granule_results('project-overview')
-      click_link('Back to Collection Search')
-      reset_project
-    end
-
-    it 'displays a timeline for the single focused collection' do
-      timeline = page.find('#timeline svg')
-      expect(timeline).to have_selector('.C179003030-ORNL_DAAC')
-    end
-  end
-
-  context 'with a temporal condition' do
-    start_date = DateTime.new(2014, 2, 10, 12, 30, 0, '+0')
-    stop_date = DateTime.new(2014, 2, 20, 16, 30, 0, '+0')
-
-    before :all do
-      add_collection_to_project('C179003030-ORNL_DAAC', '15 Minute Stream Flow Data: USGS (FIFE)')
-
-      set_temporal(start_date, stop_date)
-
-      find("#view-project").click
-    end
-
-    after :all do
-      click_link 'Back to Collection Search'
-      unset_temporal
-      reset_project
-    end
-
-    it 'pans the timeline to the applied temporal timeframe' do
-      expect(page).to have_highlighted_selection(start_date, stop_date)
-    end
-  end
-
 end

@@ -6,16 +6,17 @@ end
 
 RSpec::Matchers.define :have_query_string do |string|
   def query(page)
-    URI.parse(page.current_url).query
+    # Remove cmr_env from query params, as it isn't part of what we are testing
+    URI.parse(page.current_url).query.to_s.gsub(/cmr_env=\w*[&]?/, '')
   end
 
   match do |page|
     synchronize do
-      expect(query(page)).to eql(string)
+      expect(query(page)).to eql(string.to_s)
     end
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     "expected page to have query string #{string.inspect}, got #{query(page).inspect}"
   end
 end
@@ -29,12 +30,12 @@ RSpec::Matchers.define :have_query_param do |params|
     synchronize do
       # Test one at a time to be order-independent
       params.each do |k, v|
-        expect(query(page).include?({k => v}.to_param)).to be_true
+        expect(query(page).include?({k => v}.to_param)).to be_truthy
       end
     end
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     "expected page to have query params #{params.to_param}, got #{query(page).inspect}"
   end
 end
@@ -50,7 +51,7 @@ RSpec::Matchers.define :have_path do |string|
     end
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     "expected page to have path #{string.inspect}, got #{path(page).inspect}"
   end
 end
@@ -66,7 +67,7 @@ RSpec::Matchers.define :have_path_prefix do |string|
     end
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     "expected page to have path prefix #{string.inspect}, got #{path(page).inspect}"
   end
 end
@@ -83,7 +84,7 @@ RSpec::Matchers.define :have_no_path_prefix do |string|
     true
   end
 
-  failure_message_for_should do |page|
+  failure_message do |page|
     "expected page to not have path prefix #{string.inspect}, got #{path(page).inspect}"
   end
 end

@@ -1,10 +1,9 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe 'Collection GIBS Filtering', reset: false do
+describe 'Collection GIBS Filtering' do
   before :all do
     Capybara.reset_sessions!
-    load_page :search, facets: true, env: :sit
-
+    load_page :search, facets: true
   end
 
   context 'when selecting the GIBS filter' do

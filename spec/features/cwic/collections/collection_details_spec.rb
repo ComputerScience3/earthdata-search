@@ -1,39 +1,23 @@
-require "spec_helper"
+require 'rails_helper'
 
-describe "CWIC-enabled collection details", reset: false do
-  extend Helpers::CollectionHelpers
-
-  before :all do
-    Capybara.reset_sessions!
-    load_page :search
-  end
-
-  after :all do
-    Capybara.reset_sessions!
-  end
-
-  context "viewing the collection details for a CWIC-tagged collection" do
-    use_collection 'C1220566654-USGS_LTA', 'EO-1 (Earth Observing-1) Advanced Land Imager (ALI) Instrument Level 1R, Level 1Gs, Level 1Gst Data'
-
+describe 'CWIC-enabled collection details' do
+  context 'When viewing the collection details for a CWIC-enabled collection' do
     before :all do
-      first_collection_result.click_link('View collection details')
-      wait_for_xhr
-      click_link 'API Endpoints'
+      load_page :collection_details, focus: 'C1220566654-USGS_LTA', ac: true
+      click_on 'For developers'
     end
 
-    after :all do
-      click_link "Back to Collections"
-    end
-
-    it "displays links to the collection's CWIC OpenSearch API endpoint", acceptance: true do
+    it 'displays links with the correct text to the collection\'s CWIC OpenSearch API endpoint' do
       expect(collection_details).to have_link('OSDD')
-      url = "http://cwic.wgiss.ceos.org/opensearch/datasets/C1220566654-USGS_LTA/osdd.xml?clientId="
+    end
+
+    it 'displays links with the correct url to the collection\'s CWIC OpenSearch API endpoint' do
+      url = 'https://cwic.wgiss.ceos.org/opensearch/datasets/C1220566654-USGS_LTA/osdd.xml?clientId='
       expect(collection_details.find_link('OSDD')['href']).to start_with(url)
     end
 
-    it "does not display links to the CMR's granule search API endpoint", acceptance: true do
+    it 'does not display links to the CMR\'s granule search API endpoint' do
       expect(collection_details).to have_no_link('CMR')
     end
   end
-
 end

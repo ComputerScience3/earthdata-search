@@ -1,6 +1,6 @@
-class ESIClient
-  Faraday.register_middleware(:response, :logging => Echo::ClientMiddleware::LoggingMiddleware)
+require 'json'
 
+class ESIClient
   def self.submit_esi_request(*args)
     new.submit_esi_request(*args)
   end
@@ -9,35 +9,77 @@ class ESIClient
     new.get_esi_request(*args)
   end
 
-  def submit_esi_request(collection_id, params, method, request_url, client, token)
-    service_url = get_service_url(collection_id, client, token)
+  def self.get_multi_esi_request(*args)
+    new.get_multi_esi_request(*args)
+  end
 
-    # FILE_IDS is a comma seperated list of granule_ur's
-    granules = client.get_granules(params, token).body['feed']['entry'].map{|g| g['title']}
-
+  def submit_esi_request(retrieval_collection, granule_params, request_url, token, shapefile = nil)
+    service_url = get_service_url(retrieval_collection.collection_id, retrieval_collection.client, token)
     options = {}
 
-    options['FILE_IDS'] = granules.join(',')
-    options['CLIENT_STRING'] = "To view the status of your request, please see: #{request_url}"
+    begin
+      # Fetch the granules the user is requesting from CRM
+      granules_response = retrieval_collection.client.get_granules(granule_params, token)
+      granules = if granules_response.success?
+                   granules_response.body['feed']['entry'].map { |g| g['title'] }
+                 else
+                   Rails.logger.info "Error retrieving granules from CMR: #{granules_response.errors.join('\n')}"
 
-    @model = Nokogiri::XML(method['model'].gsub(/>\s+</,"><").strip)
+                   []
+                 end
 
-    params_hash = build_params
-    options.merge!(params_hash)
+      options['FILE_IDS'] = granules.join(',')
+      options['CLIENT_STRING'] = "To view the status of your request, please see: #{request_url}"
 
-    Rails.logger.info " service_url: #{service_url}"
-    Rails.logger.info " options:     #{options.inspect}"
+      @model = Nokogiri::XML(retrieval_collection.access_method['model'].gsub(/>\s+</, '><').strip)
+    rescue StandardError => e
+      Rails.logger.error 'Error preparing payload for ESI Request:'
+      Rails.logger.error e.message
+
+      e.backtrace.each { |line| Rails.logger.error "\t#{line}" }
+    end
+
+    options.merge!(build_params(shapefile))
+
+    log_object = {
+      retrieval: "#{retrieval_collection.retrieval.id}##{retrieval_collection.retrieval.to_param}",
+      retrieval_collection: retrieval_collection.collection_id,
+      service_url: service_url,
+      options: options.inspect
+    }
+
+    Rails.logger.tagged('esi_client#submit_esi_request') do
+      Rails.logger.info log_object.to_json
+    end
 
     post(service_url, options)
   end
 
-  def get_esi_request(collection_id, service_order_id, client, token, header_value)
-    service_url = get_service_url(collection_id, client, token)
+  def get_esi_request(collection_id, service_order_id, client, token, header_value, provided_service_url = nil)
+    service_url = provided_service_url || get_service_url(collection_id, client, token)
     get(service_url + '/' + service_order_id.to_s, {}, header_value)
+  end
+
+  def get_multi_esi_request(collection_id, service_order_id, client, token, header_value, provided_service_url = nil)
+    # This endpoint supports multiple requestIds, we'll use the newer format even if only one
+    # id was provided
+    service_order_query_params = Array.wrap(service_order_id).map { |id| "requestId[]=#{id}" }.join('&')
+
+    service_url = provided_service_url || get_service_url(collection_id, client, token)
+
+    get(service_url + '?' + service_order_query_params, {}, header_value)
   end
 
   def connection
     @connection ||= build_connection
+  end
+
+  def get_service_url(collection_id, client, token)
+      service_option_assignment = client.get_service_order_information(collection_id, token).body
+
+      service_entry_id = service_option_assignment[0]['service_option_assignment']['service_entry_id']
+
+      service_url = client.get_service_entry(service_entry_id, token).body['service_entry']['url']
   end
 
   private
@@ -53,25 +95,18 @@ class ESIClient
   def build_connection
     Faraday.new do |conn|
       conn.request :url_encoded
-      conn.response :logging
+      conn.use Echo::ClientMiddleware::LoggingMiddleware
       conn.response :json, :content_type => /\bjson$/
       conn.adapter Faraday.default_adapter
     end
   end
 
-  def get_service_url(collection_id, client, token)
-      service_option_assignment = client.get_service_order_information(collection_id, token).body
-
-      service_entry_id = service_option_assignment[0]['service_option_assignment']['service_entry_id']
-
-      service_url = client.get_service_entry(service_entry_id, token).body['service_entry']['url']
-  end
 
   def esi_fields
     @esi_fields ||= {}
   end
 
-  def build_params
+  def build_params(shapefile = nil)
     add_top_level_fields
 
     add_switch_field(:INCLUDE_META)
@@ -81,6 +116,7 @@ class ESIClient
 
     add_subset_data_layers
     add_bounding_box
+    add_shapefile(shapefile)
 
     add_parameter(:EMAIL, find_field_element("email").text.strip)
 
@@ -106,20 +142,20 @@ class ESIClient
 
   def add_top_level_fields
     [
-        :INTERPOLATION,
-        :FORMAT,
-        :PROJECTION,
-        :CLIENT,
-        :START,
-        :END,
-        :NATIVE_PROJECTION,
-        :OUTPUT_GRID,
-        :BBOX,
-        :SUBAGENT_ID,
-        :REQUEST_MODE,
-        :META,
-        :INCLUDE_META,
-  ].each do |field|
+      :INTERPOLATION,
+      :FORMAT,
+      :PROJECTION,
+      :CLIENT,
+      :START,
+      :END,
+      :NATIVE_PROJECTION,
+      :OUTPUT_GRID,
+      :BBOX,
+      :SUBAGENT_ID,
+      :REQUEST_MODE,
+      :META,
+      :INCLUDE_META,
+    ].each do |field|
       add_parameter(field, find_field_element(field).text.strip)
     end
   end
@@ -204,6 +240,24 @@ class ESIClient
     objects + fields + bands + tree_style_bands
   end
 
+
+  def add_shapefile(shapefile)
+
+    unless shapefile.nil?
+      use_shapefile = false
+
+      find_by_xpath("//ecs:spatial_subset_shapefile_flag").map{|spatial_subset_shapefile_flag|
+        if spatial_subset_shapefile_flag.text == "true"
+          use_shapefile = true
+        end
+      }
+
+      if use_shapefile
+        add_parameter(:BoundingShape, shapefile.to_json)
+      end
+    end
+  end
+
   def add_bounding_box
     bboxes = []
     #Find all bounding boxes in the option selections.  There may be zero, one, or multiple
@@ -226,5 +280,4 @@ class ESIClient
   def compact_nodes(node_set)
     node_set.select { |sub_field_value| !sub_field_value.blank? }
   end
-
 end

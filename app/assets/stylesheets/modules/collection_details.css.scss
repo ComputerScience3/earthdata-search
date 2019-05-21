@@ -2,7 +2,7 @@ $steel-blue:    rgb(68,   85, 101);
 $midnight-blue: rgb(44,   62,  80);
 
 .details /*.tab-content*/ {
-  a {
+  .master-overlay-content a {
     text-decoration: underline;
     white-space: nowrap;
   }
@@ -10,21 +10,6 @@ $midnight-blue: rgb(44,   62,  80);
   .master-overlay-back {
     text-decoration: none;
   }
-
-  header {
-
-    h4 {
-      float: left;
-      width: 66%;
-    }
-
-    .cta-buttons {
-      float: right;
-      margin: 15px 20px 0 0;
-    }
-  }
-
-
 }
 
 .spatial-bounding {
@@ -69,6 +54,11 @@ $midnight-blue: rgb(44,   62,  80);
   margin-bottom: 5px;
   margin-left: 5px;
   color: #fff;
+}
+
+.cwic-dot {
+  color: #ccaa00;
+  font-weight: bold;
 }
 
 .data-center-role-label {

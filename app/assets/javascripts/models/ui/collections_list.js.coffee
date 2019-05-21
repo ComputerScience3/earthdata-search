@@ -37,7 +37,12 @@ ns.CollectionsList = do ($ = jQuery
         owner: this
         deferEvaluation: true
 
+      @forDevelopersPanelVisible = ko.observable(false)
+
       @resetScrollOnUpdate()
+
+    toggleForDevelopersPanel: =>
+      @forDevelopersPanelVisible(!@forDevelopersPanelVisible())
 
     resetScrollOnUpdate: ->
       id = -1
@@ -84,7 +89,9 @@ ns.CollectionsList = do ($ = jQuery
         when collection.id?.toLowerCase() then true
         when collection.short_name()?.toLowerCase() then true
         when "#{collection.short_name()?.toLowerCase()}_#{collection.version_id.toLowerCase()}" then true
+        when "#{collection.short_name()?.toLowerCase()}_v#{collection.version_id.toLowerCase()}" then true
         when "#{collection.short_name()?.toLowerCase()} #{collection.version_id.toLowerCase()}" then true
+        when "#{collection.short_name()?.toLowerCase()} v#{collection.version_id.toLowerCase()}" then true
         else false
 
       data =
@@ -133,7 +140,7 @@ ns.CollectionsList = do ($ = jQuery
 
     _readFocused: ->
       current = @_focusedList
-      collection = @project.focus()
+      collection = @project.focus()?.collection
       if !@_hasFocus() || !collection?
         current?.dispose()
         @_focusedList = null
@@ -156,7 +163,7 @@ ns.CollectionsList = do ($ = jQuery
     _readSelected: ->
       if @_hasSelected()
         clearTimeout(@_unselectTimeout)
-        selected = @project.focus()
+        selected = @project.focus()?.collection
         selected?.details()
         selected
 

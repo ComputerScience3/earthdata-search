@@ -3,9 +3,9 @@
 # EDSC-96: As a user, I want to see granule browse imagery at a point I select
 #          so I may find the most desirable granules at a particular location
 
-#require "spec_helper"
+#require 'rails_helper'
 #
-#describe "Browse thumbnails", reset: false do
+#describe "Browse thumbnails" do
 #  before :all do
 #    Capybara.reset_sessions!
 #    load_page :search

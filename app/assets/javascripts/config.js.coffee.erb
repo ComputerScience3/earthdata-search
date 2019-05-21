@@ -9,25 +9,27 @@
   plugin.register("<%= name.gsub(/\.min$/, '') %>", "<%= javascript_path(File.basename(path)) %>")
   <% end %>
   <% end %>
+  host_location = window.location.hostname
+  host_cmr_env = switch host_location
+    when 'localhost' then 'sit'
+    when 'edsc.dev' then 'sit'
+    when 'search.sit.earthdata.nasa.gov' then 'sit'
+    when 'search.uat.earthdata.nasa.gov' then 'uat'
+    when 'searchlab.earthdata.nasa.gov' then 'prod'
+    else 'prod'
   query = window.location.search
   match = /cmr_env=(\w+)/.exec(query)
-  cmr_env = if match then match[1] else '<%= Rails.configuration.cmr_env %>'
+  cmr_env = if match then match[1] else host_cmr_env
 
   if cmr_env == 'uat'
     browse_scaler_url = "<%= ENV['browse_scaler_url_uat'] ||  Rails.configuration.services['earthdata']['uat']['browse_scaler_root'] %>"
-    limited_collections = "<%= Rails.configuration.services['edsc']['uat']['limited_collections'] %>".split /\s*,\s*/
     enable_esi_order_chunking = ("<%= ENV['enable_esi_order_chunking'] || Rails.configuration.services['edsc']['uat']['enable_esi_order_chunking'].to_s %>" == 'true')
-    reverb_url = "<%=ENV['reverb_root'] || Rails.configuration.services['earthdata']['uat']['reverb_root']%>"
   else if cmr_env == 'sit'
     browse_scaler_url = "<%= ENV['browse_scaler_url_sit'] ||  Rails.configuration.services['earthdata']['sit']['browse_scaler_root'] %>"
-    limited_collections = "<%= Rails.configuration.services['edsc']['sit']['limited_collections'] %>".split /\s*,\s*/
     enable_esi_order_chunking = ("<%= ENV['enable_esi_order_chunking'] || Rails.configuration.services['edsc']['sit']['enable_esi_order_chunking'].to_s %>" == 'true')
-    reverb_url = "<%=ENV['reverb_root'] || Rails.configuration.services['earthdata']['sit']['reverb_root']%>"
   else
     browse_scaler_url = "<%= ENV['browse_scaler_url_production'] ||  Rails.configuration.services['earthdata']['prod']['browse_scaler_root'] %>"
-    limited_collections = "<%= Rails.configuration.services['edsc']['production']['limited_collections'] %>".split /\s*,\s*/
     enable_esi_order_chunking = ("<%= ENV['enable_esi_order_chunking'] || Rails.configuration.services['edsc']['production']['enable_esi_order_chunking'].to_s %>" == 'true')
-    reverb_url = "<%=ENV['reverb_root'] || Rails.configuration.services['earthdata']['prod']['reverb_root']%>"
 
   <% if Rails.env.test? %>
 
@@ -44,22 +46,20 @@
     maxPolygonSize: 50
     csrfToken: csrfToken
     hoverTimeoutMs: 0
-    gibsUrl: "/assets/gibs-example.jpeg?{timeparam}SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={product}&STYLE=&TILEMATRIXSET={projection}_{resolution}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2F{format}{extra}"
+    gibsUrl: "/assets/gibs-example.jpeg?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={product}&STYLE=&TILEMATRIXSET={lprojection}_{resolution}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2F{format}&TIME={time}"
     browseScalerUrl: "/assets/gibs-example.jpeg#"
     present: -> Date.UTC(2014, 2, 1)
     animateMap: false
     cmrClientId: "<%= Rails.configuration.cmr_client_id %>"
     cmrTagNamespace: "<%= Rails.configuration.cmr_tag_namespace %>"
     thumbnailWidth: <%= Rails.configuration.thumbnail_width %>
-    asterCollections: limited_collections
     enableEsiOrderChunking: enable_esi_order_chunking
-    reverb_url: reverb_url
 
   <% elsif Rails.env.development? %>
 
   # Development config
   exports =
-    allowTouch: true
+    allowTouch: false
     urlLimit: <%= Rails.configuration.url_limit %>
     defaultAnimationDurationMs: 300
     xhrRateLimitMs: 500
@@ -67,38 +67,34 @@
     csrfToken: csrfToken
     hoverTimeoutMs: 500
     debug: true
-    gibsGranuleUrl: 'http://uat.gibs.earthdata.nasa.gov/wmts/{projection}/std/{product}/default/{time_start}/{resolution}/{z}/{y}/{x}.{format}'
-    gibsUrl: 'https://map1{s}.vis.earthdata.nasa.gov/wmts-{endpoint}/wmts.cgi?{timeparam}SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={product}&STYLE=&TILEMATRIXSET={projection}_{resolution}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2F{format}{extra}'
+    gibsGranuleUrl: 'http://uat.gibs.earthdata.nasa.gov/wmts/{projection}/std/{product}/default/{time}/{resolution}/{z}/{y}/{x}.{format}'
+    gibsUrl: 'https://gibs.earthdata.nasa.gov/wmts/{lprojection}/best/{product}/default/{time}/{resolution}/{z}/{y}/{x}.{format}'
     browseScalerUrl: browse_scaler_url
     present: -> new Date() - 0
     animateMap: true
     cmrClientId: "<%= Rails.configuration.cmr_client_id %>"
     cmrTagNamespace: "<%= Rails.configuration.cmr_tag_namespace %>"
     thumbnailWidth: <%= Rails.configuration.thumbnail_width %>
-    asterCollections: limited_collections
     enableEsiOrderChunking: enable_esi_order_chunking
-    reverb_url: reverb_url
 
   <% else %>
   # Production config
   exports =
-    allowTouch: true
+    allowTouch: false
     urlLimit: <%= Rails.configuration.url_limit %>
     defaultAnimationDurationMs: 300
     xhrRateLimitMs: 500
     maxPolygonSize: 50
     csrfToken: csrfToken
     hoverTimeoutMs: 500
-    gibsGranuleUrl: 'http://uat.gibs.earthdata.nasa.gov/wmts/{projection}/std/{product}/default/{time_start}/{resolution}/{z}/{y}/{x}.{format}'
-    gibsUrl: 'https://map1{s}.vis.earthdata.nasa.gov/wmts-{endpoint}/wmts.cgi?{timeparam}SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER={product}&STYLE=&TILEMATRIXSET={projection}_{resolution}&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&FORMAT=image%2F{format}{extra}'
+    gibsGranuleUrl: 'http://uat.gibs.earthdata.nasa.gov/wmts/{projection}/std/{product}/default/{time}/{resolution}/{z}/{y}/{x}.{format}'
+    gibsUrl: 'https://gibs.earthdata.nasa.gov/wmts/{lprojection}/best/{product}/default/{time}/{resolution}/{z}/{y}/{x}.{format}'
     browseScalerUrl: browse_scaler_url
     present: -> new Date() - 0
     animateMap: true
     cmrClientId: "<%= Rails.configuration.cmr_client_id %>"
     cmrTagNamespace: "<%= Rails.configuration.cmr_tag_namespace %>"
     thumbnailWidth: <%= Rails.configuration.thumbnail_width %>
-    asterCollections: limited_collections
     enableEsiOrderChunking: enable_esi_order_chunking
-    reverb_url: reverb_url
 
   <% end %>

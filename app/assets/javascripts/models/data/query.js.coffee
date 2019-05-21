@@ -15,18 +15,6 @@ ns.query = do (ko,
                urlUtil=@edsc.util.url
                extend=$.extend) ->
 
-
-  # This is a little gross, but we're allowing an override of temporal
-  # query values on the configure page only to disambiguate the user's
-  # intent when they set a temporal constraint and a timeline focus.
-  # We need to do it here to avoid inordinate pauses waiting for URL
-  # updates, project saving, etc, when clicking the "download all button."
-  if window.location.href.indexOf('/data/configure') != -1
-    href = window.location.href
-    overrideTemporalParam = href.match(/[?&]ot=([^&$]+)/)
-    if overrideTemporalParam?
-      overrideTemporal = decodeURIComponent(overrideTemporalParam[1])
-
   ko.extenders.queryable = (target, paramObj) ->
     paramObj.value = target
     target.params = ko.computed(null, paramObj, paramObj)
@@ -172,7 +160,7 @@ ns.query = do (ko,
   class NegatedBooleanParam extends QueryParam
     canWrite: ->
       @value() is false || @value() is 'false' || @value() is 'gov.nasa.eosdis'
-    
+
     readFrom: (query) ->
       for name in @names()
         value = query[name]
@@ -282,8 +270,6 @@ ns.query = do (ko,
       for component in components
         extend(true, params, component.params())
 
-      # Perform the temporal override if appropriate
-      params.temporal = overrideTemporal if overrideTemporal
       params
 
     serialize: -> @_writeComponents(@_serialized, {})
@@ -302,6 +288,7 @@ ns.query = do (ko,
       @portal = @queryComponent(new QueryParam('portal'), '')
       @placename = @queryComponent(new QueryParam('placename'), '', query: false)
       @temporalComponent = @queryComponent(new QueryParam('temporal'), @temporal.applied.queryCondition, propagate: true)
+      @overrideTemporal = @queryComponent(new QueryParam('override_temporal'), ko.observable(null), propagate: true)
       @spatial = @queryComponent(new SpatialParam(), '', propagate: true)
       @mbr = @computed(read: @_computeMbr, owner: this, deferEvaluation: true)
       @gridComponent = @queryComponent(new QueryParam('two_d_coordinate_system'), @grid.queryCondition, propagate: true)
@@ -310,10 +297,29 @@ ns.query = do (ko,
       @pageSize = @queryComponent(new QueryParam('page_size'), 20, ephemeral: true)
       @keywords = @queryComponent(new KeywordParam('free_text', @placename), '')
       @originalKeywords = @queryComponent(new KeywordParam('original_keyword', @placename), '')
+      @shapefileId = @queryComponent(new QueryParam('shapefile_id'), '', query: false)
 
       @hasGranules = @queryComponent(new NegatedBooleanParam('all_collections'), true)
       @hasNonEOSDIS = @queryComponent(new NegatedBooleanParam('tag_key'), true)
-      
+      @sortOptions = [{name: 'Usage', value: ['-usage_score']}, {name: 'End Date', value: ['-ongoing']}]
+
+      @sortKey = @queryComponent(new QueryParam('sort_key'), '', ephemeral: true)
+
+      # Subscribe to the sortKey for the purpose of sending changes to Google Analytics
+      @sortKey.subscribe (sortKey) =>
+        if dataLayer?
+          if !sortKey?
+            eventValue = 'relevance'
+          else
+            eventValue = sortKey[0]
+
+          dataLayer.push({
+            'event': 'collectionSortChange',
+            'collectionSortChangeCategory': 'search result sort',
+            'collectionSortChangeAction': 'change'
+            'collectionSortChangeLabel': eventValue
+          })
+
       super(parentQuery)
 
     clearFilters: =>
@@ -360,7 +366,7 @@ ns.query = do (ko,
       @isValid = @computed(read: @_computeIsValid, deferEvaluation: true)
       @attributes = new GranuleAttributes(attributes)
 
-   
+
 
       @temporal = new Temporal()
       @cloudCover = new Range()
@@ -418,19 +424,19 @@ ns.query = do (ko,
       isNaN(value) || value >= 0
 
     validateOrbitNumberRange: (min, max) =>
-      isNaN(parseFloat(min)) || isNaN(parseFloat(max)) || parseFloat(min) <= parseFloat(max)  
+      isNaN(parseFloat(min)) || isNaN(parseFloat(max)) || parseFloat(min) <= parseFloat(max)
 
     validateEquatorialCrossingLongitudeValue: (equatorial_value) =>
       value = parseFloat(equatorial_value)
       isNaN(value) || (value >= -180.0 && value <= 180.0)
 
     validateEquatorialCrossingLongitudeRange: (min, max) =>
-      isNaN(parseFloat(min)) || isNaN(parseFloat(max)) || parseFloat(min) <= parseFloat(max) 
+      isNaN(parseFloat(min)) || isNaN(parseFloat(max)) || parseFloat(min) <= parseFloat(max)
 
     validateEquatorialCrossingDateValue: (date_value) =>
       regEx = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
       if date_value
-        date_value.match(regEx) != null 
+        date_value.match(regEx) != null
       else if date_value != null
         true
       else
@@ -440,7 +446,7 @@ ns.query = do (ko,
       if Date.parse(min) && Date.parse(max)
         Date.parse(min) <= Date.parse(max)
       else
-        true        
+        true
 
     _computeProject: (facets) =>
       project = ''

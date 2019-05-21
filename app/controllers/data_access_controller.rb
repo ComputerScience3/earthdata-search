@@ -1,9 +1,14 @@
 require 'json'
 require 'digest/sha1'
 
+# :nodoc:
 class DataAccessController < ApplicationController
   include ActionView::Helpers::TextHelper
+
+  include CollectionUtils
   include GranuleUtils
+  include ServiceUtils
+
   respond_to :json
 
   before_filter :require_login
@@ -19,133 +24,67 @@ class DataAccessController < ApplicationController
     end
   end
 
-  def configure
-    metrics_event('retrieve', {step: 'configure'})
-    @back_path = request.query_parameters['back']
-    if !@back_path || ! %r{^/[\w/]*$}.match(@back_path)
-      @back_path = '/search/collections'
-    end
-
-    #This block removes the granule filter per EDSC-1214
-    @paramsWithoutGranuleFilter = request.query_string
-    params = CGI.parse(@paramsWithoutGranuleFilter)
-    params.delete('sgd')
-    @paramsWithoutGranuleFilter = URI.encode_www_form(params).to_s
-    @paramsWithoutGranuleFilter = URI.unescape(@paramsWithoutGranuleFilter)
-  end
-
   def retrieve
-    # TODO PQ EDSC-1039: Store portal information here
+    # TODO: PQ EDSC-1039: Store portal information here
     user = current_user
     unless user
       render file: 'public/401.html', status: :unauthorized
+
       return
     end
 
-    metrics_event('retrieve', {step: 'complete'})
-
+    metrics_event('retrieve', step: 'complete')
     project = JSON.parse(params[:project])
 
     retrieval = Retrieval.new
     retrieval.user = user
     retrieval.project = project
+    retrieval.token = token
+    retrieval.environment = cmr_env
     retrieval.save!
 
-    Retrieval.delay.process(retrieval.id, token, cmr_env, edsc_path(request.base_url + '/'), session[:access_token])
+    ProcessRetrievalJob.perform_later(retrieval.id, edsc_path(request.base_url), cmr_env)
 
     redirect_to edsc_path("/data/retrieve/#{retrieval.to_param}")
   end
 
   def retrieval
-    # TODO PQ EDSC-1039: Include portal information here
-    id = Retrieval.deobfuscate_id params[:id].to_i
+    # TODO: PQ EDSC-1039: Include portal information here
+    Rails.logger.info "Retrieving order status information for Retrieval Object ##{params[:id]}"
+
+    id = Retrieval.deobfuscate_id(params[:id].to_i)
     @retrieval = Retrieval.find_by_id id
+
     render file: "#{Rails.root}/public/404.html", status: :not_found and return if @retrieval.nil?
-
-    Rails.logger.info(@retrieval.to_json)
-
-    orders = @retrieval.collections.map do |collection|
-      collection['serviceOptions']['accessMethod'].select { |m| m['type'] == 'order' }
-    end.flatten.compact
-
-    service_orders = @retrieval.collections.map do |collection|
-      collection['serviceOptions']['accessMethod'].select { |m| m['type'] == 'service' }
-    end.flatten.compact
-
-    if orders.size > 0
-      order_ids = orders.map {|o| o['order_id']}
-      order_ids.each do |order_id|
-          order_response = order_id && order_id.compact.size > 0 ? echo_client.get_orders({id: order_id}, token) : nil
-          if order_response && order_response.success?
-            echo_orders = order_response.body.map {|o| o['order']}.index_by {|o| o['id']}
-
-            orders.each do |order|
-              Array.wrap(order['order_id']).each do |id|
-                echo_order = echo_orders[id]
-
-                if echo_order
-                  order['order_status'] = echo_order['state']
-                else
-                  # echo order_id doesn't exist yet
-                  order['order_status'] ||= 'creating'
-                end
-              end
-            end
-          end
-          # if no order numbers exist yet
-          if order_response.nil?
-            orders.each do |order|
-              order['order_status'] ||= 'creating'
-            end
-          end
-      end
-    end
-
-    # order_id is an array from retrieval.rb, but I need order_status, number_processed, total_number, etc. to match that array of order_ids
-    if service_orders.size > 0
-      service_orders.each do |s|
-        s['order_status'] = 'creating'
-        s['service_options'] = {}
-        s['service_options']['number_processed'] = 0
-        s['service_options']['total_number'] = 0
-        s['service_options']['download_urls'] = []
-
-        if (s['error_code'].is_a? String) || s['error_code'].present? && !s['error_code'].compact.empty?
-          s['order_status'] = 'failed'
-        elsif s['collection_id']
-          header_value = request.referrer && request.referrer.include?('/data/configure') ? '1' : '2'
-
-          Array.wrap(s['order_id']).each do |order_id|
-            response = ESIClient.get_esi_request(s['collection_id'], order_id, echo_client, token, header_value).body
-            response_json = MultiXml.parse(response)
-            urls = []
-            if response_json['agentResponse']
-              status = response_json['agentResponse']['requestStatus']
-              process_info = response_json['agentResponse']['processInfo']
-              urls = Array.wrap(response_json['agentResponse']['downloadUrls']['downloadUrl']) if response_json['agentResponse']['downloadUrls']
-            else
-              status = {'status' => 'failed'}
-              s['error_code'] = response_json['Exception'].nil? ? 'Unknown' : response_json['Exception']['Code']
-              s['error_message'] = Array.wrap(response_json['Exception'].nil? ? 'Unknown' : response_json['Exception']['Message'])
-            end
-
-            s['order_status'] = status['status']
-            s['service_options']['number_processed'] += status['numberProcessed'].to_i
-            s['service_options']['total_number'] += status['totalNumber'].to_i
-            s['service_options']['download_urls'] += urls
-
-            if s['order_status'] == 'failed' && response_json['Exception'].nil? && !process_info.nil?
-              s['error_message'] = Array.wrap(process_info['message'])
-              s['error_code'] = 'Error Code Not Provided'
-            end
-          end
-        end
-      end
-    end
 
     user = current_user
     render file: "#{Rails.root}/public/401.html", status: :unauthorized  and return unless user
     render file: "#{Rails.root}/public/403.html", status: :forbidden and return unless user == @retrieval.user
+
+    # Ignore this for ajax requests and purposfully place it after the
+    # check for ownership, we don't want randos causing jobs to be created
+    unless params[:format] == 'json' || Rails.env.test?
+      # Check the database for any jobs that exist to create this order
+      processing_job = DelayedJob.where("handler LIKE '%job_class: ProcessRetrievalJob%'")
+                                 .where("handler LIKE '%arguments:\n- #{id.to_i}%'")
+                                 .where(failed_at: nil)
+
+      # Check the database for any jobs that exist to refresh this orders data
+      retrieval_jobs = DelayedJob.where("handler LIKE '%job_class: OrderStatusJob%'")
+                                 .where("handler LIKE '%arguments:\n- #{id.to_i}%'")
+                                 .where(failed_at: nil)
+
+      # If there are no jobs scheduled for this order and its not
+      # already complete create a new one to retrieve new data
+      if processing_job.empty? && retrieval_jobs.empty? && @retrieval.in_progress
+        @retrieval.update_attribute('token', token)
+
+        Rails.logger.info "Queueing up a new job to retrieve order status information for Retrieval ##{id.to_i}"
+
+        OrderStatusJob.set(queue: @retrieval.determine_queue).perform_later(id.to_i, token, cmr_env)
+      end
+    end
+
     respond_to do |format|
       format.html
       format.json { render json: @retrieval.project.merge(id: @retrieval.to_param).to_json }
@@ -153,12 +92,8 @@ class DataAccessController < ApplicationController
   end
 
   def status
-    # TODO PQ EDSC-1039: Include portal information here
-    if current_user
-      @retrievals = current_user.retrievals
-    else
-      render file: "#{Rails.root}/public/401.html"
-    end
+    # TODO: PQ EDSC-1039: Include portal information here
+    @retrievals = current_user.retrievals
   end
 
   def remove
@@ -176,6 +111,30 @@ class DataAccessController < ApplicationController
     end
   end
 
+  def get_service_for_collection_with_type(collection_id, service_type)
+    collection = retrieve_collection(collection_id, token, 'json')
+
+    return unless collection.success?
+
+    service_concept_ids = collection.body.fetch('associations', {}).fetch('services', [])
+
+    Rails.logger.info "Service Concept IDs: #{service_concept_ids}"
+
+    return if service_concept_ids.empty?
+
+    associated_services = retrieve_services({ concept_id: service_concept_ids, format: 'umm_json' }, token)
+
+    return unless associated_services.success?
+
+    associated_services.body.fetch('items', []).each do |service|
+      Rails.logger.info "Selected Service Type for #{collection_id}: #{service.fetch('umm', {})['Type']}"
+      return service if service.fetch('umm', {})['Type'] == service_type
+    end
+
+    # If nothing was found return nil
+    nil
+  end
+
   # This rolls up getting information on data access into an API that approximates
   # what we'd like ECHO / CMR to support.
   def options
@@ -190,25 +149,86 @@ class DataAccessController < ApplicationController
 
       defaults = AccessConfiguration.get_default_access_config(current_user, collection)
 
+      # If the user provides a spatial search for their project, those params
+      # will be saved in their default AccessConfiguration.
+      # If the user retrieves that collection again the original spatial params
+      # will be included in their form.
+      # If the user has a different spatial search those values will overwrite
+      # the original params, but if the user doesn't have any spatial applied
+      # they will still have the original spatial values applied in their echoform.
+      #
+      # This code removes any spatial params from the user's form, if they don't
+      # have a bounding_box param on their project page.
+      if params['bounding_box'].blank? && defaults.present?
+        model = defaults.service_options['accessMethod'][0]['model']
+        if model.present?
+          doc = Nokogiri::XML(model)
+          # reset spatial_subset_flag
+          flag = doc.at_xpath('//*[local-name() = "spatial_subset_flag"]')
+          if flag && flag.content == 'true'
+            flag.content = 'false'
+            defaults.service_options['accessMethod'][0]['model'] = doc.to_html
+          end
+
+          # update rawModel
+          raw_model = defaults.service_options['accessMethod'][0]['rawModel']
+          if raw_model.present?
+            doc = Nokogiri::XML(raw_model)
+            # reset spatial_subset_flag
+            flag = doc.at_xpath('//*[local-name() = "spatial_subset_flag"]')
+            if flag && flag.content == 'true'
+              flag.content = 'false'
+              # reset default values in rawModel
+              doc.at_xpath('//*[local-name() = "ullat"]').content = '90' unless doc.at_xpath('//*[local-name() = "ullat"]').nil?
+              doc.at_xpath('//*[local-name() = "ullon"]').content = '-180' unless doc.at_xpath('//*[local-name() = "ullon"]').nil?
+              doc.at_xpath('//*[local-name() = "lrlat"]').content = '-90' unless doc.at_xpath('//*[local-name() = "lrlat"]').nil?
+              doc.at_xpath('//*[local-name() = "lrlon"]').content = '180' unless doc.at_xpath('//*[local-name() = "lrlon"]').nil?
+              defaults.service_options['accessMethod'][0]['rawModel'] = doc.to_html
+            end
+          end
+        end
+      end
+
       granules = catalog_response.body['feed']['entry']
 
       result = {}
-      if granules.size > 0
+      if !granules.empty?
         hits = catalog_response.headers['cmr-hits'].to_i
 
-
-        sizeMB = granules.reduce(0) {|size, granule| size + granule['granule_size'].to_f}
+        sizeMB = granules.reduce(0) { |size, granule| size + granule['granule_size'].to_f }
         size = (1024 * 1024 * sizeMB / granules.size) * hits
 
-        units = ['Bytes', 'Kilobytes', 'Megabytes', 'Gigabytes', 'Terabytes', 'Petabytes', 'Exabytes']
+        units = %w(Bytes Kilobytes Megabytes Gigabytes Terabytes Petabytes Exabytes)
         while size > 1024 && units.size > 1
           size = size.to_f / 1024
-          units.shift()
+          units.shift
         end
 
-        methods = get_downloadable_access_methods(collection, granules, granule_params, hits) + get_order_access_methods(collection, granules, hits) + get_service_access_methods(collection, granules, hits)
+        methods = get_downloadable_access_methods(collection, granules, granule_params, hits) + get_order_access_methods(collection, granules, hits) + get_service_access_methods(collection, granules, hits) + get_opendap_access_methods(collection, granules, granule_params, hits)
 
-        defaults = {service_options: nil} if echo_form_outdated?(defaults, methods)
+        defaults = { service_options: nil } if echo_form_outdated?(defaults, methods)
+
+        # If there are no defaults (no AccessConfigurations) and only 1 accessMethod,
+        # then set the default to that access method. NOTE: If there defaults then the
+        # `defaults` variable will be an AccessConfigration, if there are no defaults
+        # it is a Hash.
+        if defaults.is_a?(Hash) && defaults.compact.blank?
+          if methods.length == 1
+            only_method = methods[0]
+
+            # When a collection as been previously ordered we store the information the
+            # user selected in an AccessConfiguration object, since we don't have all of
+            # that information at this point we'll just set the necessary values for the
+            # UI to load correctly and select the only option avaialble.
+            defaults[:service_options] = {
+              accessMethod: [{
+                method: only_method[:name],
+                type: only_method[:type],
+                id: only_method[:id]
+              }]
+            }
+          end
+        end
 
         result = {
           hits: hits,
@@ -259,10 +279,36 @@ class DataAccessController < ApplicationController
     false
   end
 
+  def get_opendap_access_methods(collection_id, granules, granule_params, hits)
+    # We will not check the `online_access_flag` flag on the granules for the OPeNDAP
+    # accessMethod because providers should would not assign an OPeNDAP UMM Service
+    # record to the collection unless the granules supported it
+    return [] if granules.empty?
+
+    # TODO: We may want to pull in details from the UMM Service record to populate this
+    # accessMethod, though we currently need to ping the CMR services endpoint later anyway
+    s_record = get_service_for_collection_with_type(collection_id, 'OPeNDAP')
+
+    return [] unless s_record
+
+    [{
+      collection_id: collection_id,
+      name: 'OPeNDAP',
+      type: 'opendap',
+      subset: false,
+      parameters: [],
+      formats: [],
+      spatial: granule_params['bounding_box'],
+      all: true,
+      umm_service: s_record,
+      count: hits
+    }]
+  end
+
   def get_downloadable_access_methods(collection_id, granules, granule_params, hits)
     result = []
     opendap_config = OpendapConfiguration.find(collection_id, echo_client, token) if collection_id.present?
-    Rails.logger.info("opendap_config.inspect: #{opendap_config.inspect}")
+
     unless opendap_config
       opendap_config = OpendapConfiguration.new(collection_id)
     end
@@ -271,6 +317,7 @@ class DataAccessController < ApplicationController
     else
       downloadable = granules.select {|granule| granule['online_access_flag'] == 'true' || granule['online_access_flag'] == true}
     end
+
     if downloadable.size > 0
       spatial = granule_params['bounding_box'] || granule_params['polygon'] || granule_params['point'] || granule_params['line']
 
@@ -299,62 +346,100 @@ class DataAccessController < ApplicationController
   end
 
   def get_order_access_methods(collection_id, granules, hits)
-    granule_ids = granules.map {|granule| granule['id']}
-    order_info = echo_client.get_order_information(granule_ids, token).body
-    orderable_count = 0 #order_info['order_information']['orderable']
+    # Both s_record and echo form association need to be present for the access method to be supported
+    s_record = get_service_for_collection_with_type(collection_id, 'ECHO ORDERS')
 
-    defs = {}
+    return [] unless s_record
+
+    # Pull out the granule ids from the granule objects
+    granule_ids = granules.map { |granule| granule['id'] }
+
+    # Legacy Services contains ordering information at a granule level
+    order_info = echo_client.get_order_information(granule_ids, token).body
+
+    # Default a count of how many granules are
+    # orderable (within order_info['order_information']['orderable'])
+    orderable_count = 0
+
+    # Creates an empty hash for the order option definitions
+    access_methods = {}
+
+    # For each granule that we requested information from we'll use
+    # the respone to create a more complete and compact list of option definitions
     Array.wrap(order_info).each do |info|
       info = info['order_information']
-      granule_id = info['catalog_item_ref']['id']
+
       orderable_count += 1 if info['orderable']
 
+      # Collect all the order option definitions guids which will define
+      # the options associated with the granules the user is requesting
       Array.wrap(info['option_definition_refs']).each do |ref|
         option_id = ref['id']
         option_name = ref['name']
 
-        defs[option_id] ||= {
+        access_methods[option_id] ||= {
           name: option_name,
-          count: 0
+          count: 0,
+          umm_service: s_record
         }
-        defs[option_id][:count] += 1
+        access_methods[option_id][:count] += 1
       end
     end
 
-    defs = defs.map do |option_id, config|
-      option_def = echo_client.get_option_definition(option_id, token).body['option_definition']
-      if option_def['deprecated']
+    # Generally this will end up being a single record
+    access_methods = access_methods.map do |option_id, config|
+      # Given the order option definition guids retrieved previously, we'll
+      # now ask Legacy Services for the full objects which will provide
+      # all the details we need to display the appropriate order forms
+      option_definition_response = echo_client.get_option_definition(option_id, token)
+
+      # Discontinue processing if the response from Legacy Services was unsuccessful
+      # next unless option_definition_response.success?
+
+      option_definition = option_definition_response.body['option_definition'] || {}
+
+      if option_definition['deprecated']
+        # If the order option definition is deprecated, set this configuration
+        # to nil and then remove it below when we call `.compact`
         config = nil
       else
+        # Otherwise, hydrate our definition object with additional data
+        # Currently `config` contains only `name` and `count`
         config[:collection_id] = collection_id
         config[:id] = option_id
         config[:type] = 'order'
-        config[:form] = option_def['form']
-        config[:form_hash] = Digest::SHA1.hexdigest(option_def['form'])
+        config[:form] = option_definition['form']
+        config[:form_hash] = Digest::SHA1.hexdigest(option_definition['form'])
         config[:all] = config[:count] == granules.size
         config[:count] = (hits.to_f * config[:count] / granules.size).round
       end
       config
     end.compact
 
-    # If no order options exist, still place an order
-    if defs.size == 0 && orderable_count > 0
-      config = {}
-      config[:collection_id] = collection_id
-      config[:id] = nil
-      config[:name] = 'Order'
-      config[:type] = 'order'
-      config[:form] = nil
-      config[:form_hash] = nil
-      config[:all] = orderable_count == granules.size
-      config[:count] = (hits.to_f * orderable_count / granules.size).round
-      defs = [config]
+    # If no order options are returned we'll create a placeholder object to allow
+    # the user to continue placing the order with no options
+    if access_methods.empty? && orderable_count > 0
+      access_methods = [{
+        collection_id: collection_id,
+        id: nil,
+        name: 'Order',
+        type: 'order',
+        form: nil,
+        form_hash: nil,
+        all: orderable_count == granules.size,
+        count: (hits.to_f * orderable_count / granules.size).round
+      }]
     end
 
-    defs
+    access_methods
   end
 
-  def get_service_access_methods(collection_id, granules, hits)
+  def get_service_access_methods(collection_id, granules, _hits)
+    # Both s_record and echo form association need to be present for the access method to be supported
+    s_record = get_service_for_collection_with_type(collection_id, 'ESI')
+
+    return [] unless s_record
+
     service_order_info = echo_client.get_service_order_information(collection_id, token).body
 
     service_order_info.map do |info|
@@ -373,6 +458,7 @@ class DataAccessController < ApplicationController
       config[:name] = name
       config[:count] = granules.size
       config[:all] = true
+      config[:umm_service] = s_record
       config
     end
   end

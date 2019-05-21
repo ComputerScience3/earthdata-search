@@ -249,7 +249,7 @@ edsc_current:
     body:
       encoding: UTF-8
       string: '{"user":{"addresses":[{"city":"Alexandria","country":"United States","id":"4029FD6E-AA1A-87A3-209F-C012B8DD9A51","state":"VA","street1":"101
-        N. Columbus St.","street2":"Suite 200","us_format":false,"zip":"22314"}],"creation_date":"2014-02-04T20:55:34Z","email":"patrick+edsc@element84.com","first_name":"Earthdata","id":"4C0390AF-BEE1-32C0-4606-66CAFDD4131D","last_name":"Search","opt_in":false,"organization_name":"EDSC","primary_study_area":"OTHER","user_domain":"OTHER","user_region":"USA","user_type":"PRODUCTION_USER","username":"edsc"}}'
+        N. Columbus St.","street2":"Suite 200","us_format":false,"zip":"22314"}],"creation_date":"2014-02-04T20:55:34Z","email":"patrick+edsc@element84.com","first_name":"Earthdata","id":"edsc","last_name":"Search","opt_in":false,"organization_name":"EDSC","primary_study_area":"OTHER","user_domain":"OTHER","user_region":"USA","user_type":"PRODUCTION_USER","username":"edsc"}}'
     http_version:
 edsc_current_testbed:
   response:
@@ -278,7 +278,7 @@ edsc_current_testbed:
     body:
       encoding: UTF-8
       string: '{"user":{"addresses":[{"city":"Alexandria","country":"United States","id":"4029FD6E-AA1A-87A3-209F-C012B8DD9A51","state":"VA","street1":"101
-        N. Columbus St.","street2":"Suite 200","us_format":false,"zip":"22314"}],"creation_date":"2014-02-04T20:55:34Z","email":"patrick+edsc@element84.com","first_name":"Earthdata","id":"4C0390AF-BEE1-32C0-4606-66CAFDD4131D","last_name":"Search","opt_in":false,"organization_name":"EDSC","primary_study_area":"OTHER","user_domain":"OTHER","user_region":"USA","user_type":"PRODUCTION_USER","username":"edsc"}}'
+        N. Columbus St.","street2":"Suite 200","us_format":false,"zip":"22314"}],"creation_date":"2014-02-04T20:55:34Z","email":"patrick+edsc@element84.com","first_name":"Earthdata","id":"edsc","last_name":"Search","opt_in":false,"organization_name":"EDSC","primary_study_area":"OTHER","user_domain":"OTHER","user_region":"USA","user_type":"PRODUCTION_USER","username":"edsc"}}'
     http_version:
 365deea9191426660df70c9dce859bda79ab9e9d:
   response:
@@ -541,6 +541,30 @@ on_collections_loaded_for_invalid_token:
     body:
       encoding: UTF-8
       string: '{"feed":{"updated":"2015-12-28T20:01:36.278Z","id":"https://cmr.earthdata.nasa.gov:443/search/collections.json?include_facets=true&page_size=20&page_num=1&hierarchical_facets=true&exclude%5Btag_key%5D=edsc.%2A&options%5Btag_key%5D%5Bpattern%5D=true&echo_collection_id%5B%5D=C1229626387-LANCEMODIS&echo_collection_id%5B%5D=C1219032686-LANCEMODIS&keyword=C179002986-ORNL_DAAC%2A&include_has_granules=true&include_granule_counts=true","title":"ECHO dataset metadata","entry":[],"facets":[{"field":"project","value-counts":[]},{"field":"sensor","value-counts":[]},{"field":"two_d_coordinate_system_name","value-counts":[]},{"field":"processing_level_id","value-counts":[]},{"field":"detailed_variable","value-counts":[]},{"subfields":[],"field":"data_centers"},{"subfields":[],"field":"archive_centers"},{"subfields":[],"field":"platforms"},{"subfields":[],"field":"instruments"},{"subfields":[],"field":"science_keywords"}]}}'
+    http_version:
+on_collections_loaded_for_invalid_token_newest:
+  response:
+    status:
+      code: 200
+      message:
+    headers:
+      date:
+      - Wed, 21 Jan 2015 13:47:36 GMT
+      access-control-allow-origin:
+      - "*"
+      cmr-hits:
+      - '0'
+      cmr-took:
+      - '55'
+      content-type:
+      - application/json; charset=utf-8
+      connection:
+      - close
+      server:
+      - Jetty(7.x.y-SNAPSHOT)
+    body:
+      encoding: UTF-8
+      string: '{"feed":{"updated":"2017-12-18T14:46:17.923Z","id":"https://cmr.earthdata.nasa.gov:443/search/collections.json?page_size=20&page_num=1&include_tags=edsc.%2A%2Corg.ceos.wgiss.cwic.granules.prod&sort_key%5B%5D=has_granules&sort_key%5B%5D=score&has_granules_or_cwic=true&options%5Btemporal%5D%5Blimit_to_granules%5D=true&keyword=C179002986-ORNL_DAAC%2A&include_has_granules=true&include_granule_counts=true","title":"ECHO dataset metadata","entry":[{"processing_level_id":"3","tags":{"org.ceos.wgiss.cwic.granules.prod":{}},"boxes":["53.42 -106.32 56.25 -97.23"],"time_start":"1994-05-24T00:00:00.000Z","version_id":"1","updated":"2000-01-27T00:00:00.000Z","dataset_id":"BOREAS AFM-03 Electra 1994 Aircraft Flux and Moving Window Data","has_spatial_subsetting":false,"has_transforms":false,"has_variables":false,"data_center":"ORNL_DAAC","short_name":"BOREAS_AFM3MW94_495","organizations":["ORNL_DAAC"],"title":"BOREAS AFM-03 Electra 1994 Aircraft Flux and Moving Window Data","coordinate_system":"CARTESIAN","summary":"Measurements of the fluxes of momentum, sensible and latent heat, carbon dioxide, and ozone over the entire BOREAS region to tie together measurements made in both the SSA and the NSA.","has_granules":true,"time_end":"1994-09-16T23:59:59.000Z","orbit_parameters":{},"id":"C179002986-ORNL_DAAC","has_formats":false,"score":0.5,"original_format":"ECHO10","granule_count":2,"archive_center":"ORNL_DAAC","browse_flag":true,"online_access_flag":true,"links":[{"rel":"http://esipfed.org/ns/fedsearch/1.1/data#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/BOREAS/guides/AFM03_AC_Flux.html"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://doi.org/10.3334/ORNLDAAC/495"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/comp/AFM03_AC_Flux.doc"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/comp/AFM03_AC_Flux.pdf"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/comp/AFM03_AC_Flux.txt"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/comp/afm3mw94.def"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/documentation#","hreflang":"en-US","href":"https://daac.ornl.gov/daacdata/boreas/AFM/afm3mw94/comp/electra.pdf"},{"rel":"http://esipfed.org/ns/fedsearch/1.1/browse#","hreflang":"en-US","href":"https://daac.ornl.gov/graphics/browse/project/BOREAS_color_logo_sm.gif"}]}]}}'
     http_version:
 first_service_request:
   response:
@@ -985,164 +1009,6 @@ acab3c43996bb7f51d50e4301fe55418086eadbd:
       encoding: UTF-8
       string: '{"order":{"id":"B83E748F-BEEF-528A-0265-CA6DDA7A8A78","provider_orders":[]}}'
     http_version:
-14a0ec30b17ac928b6678e04f531f842e2a96520:
-  response:
-    status:
-      code: 200
-      message:
-    headers:
-      server:
-      - nginx/1.4.7
-      date:
-      - Tue, 24 Nov 2015 17:33:21 GMT
-      content-type:
-      - application/json; charset=utf-8
-      transfer-encoding:
-      - chunked
-      connection:
-      - close
-      status:
-      - 200 OK
-      x-frame-options:
-      - SAMEORIGIN
-      x-xss-protection:
-      - 1; mode=block
-      x-content-type-options:
-      - nosniff
-      cache-control:
-      - no-cache
-      x-request-id:
-      - 9b962bd0-f008-49bb-8008-1da4ab44b713
-      x-runtime:
-      - '0.005167'
-    body:
-      encoding: UTF-8
-      string: '{"uid":"edsc","first_name":"Earthdata","last_name":"Search","email_address":"patrick+edsc@element84.com","country":"United States","study_area":"OTHER","user_type":"PRODUCTION_USER","affiliation":"OTHER","organization":"EDSC","member_groups":["earthdata_ecc","echo"]}'
-    http_version:
-edscbasic_from_urs:
-  response:
-    status:
-      code: 200
-      message:
-    headers:
-      server:
-      - nginx/1.4.7
-      date:
-      - Tue, 24 Nov 2015 17:33:21 GMT
-      content-type:
-      - application/json; charset=utf-8
-      transfer-encoding:
-      - chunked
-      connection:
-      - close
-      status:
-      - 200 OK
-      x-frame-options:
-      - SAMEORIGIN
-      x-xss-protection:
-      - 1; mode=block
-      x-content-type-options:
-      - nosniff
-      cache-control:
-      - no-cache
-      x-request-id:
-      - 9b962bd0-f008-49bb-8008-1da4ab44b713
-      x-runtime:
-      - '0.005167'
-    body:
-      encoding: UTF-8
-      string: '{"uid":"edsc","first_name":"Earthdata","last_name":"Search","email_address":"patrick+edsc@element84.com","country":"United States","study_area":"OTHER","user_type":"PRODUCTION_USER","affiliation":"OTHER","organization":"EDSC","member_groups":["earthdata_ecc","echo"]}'
-    http_version:
-5465c54b75a62eac4512160fe28a6627c96aea19:
-  response:
-    status:
-      code: 200
-      message:
-    headers:
-      server:
-      - Apache-Coyote/1.1
-      cache-control:
-      - no-cache
-      x-ua-compatible:
-      - IE=Edge,chrome=1
-      x-runtime:
-      - '0.229000'
-      content-type:
-      - application/json;charset=utf-8
-      vary:
-      - Accept-Encoding
-      date:
-      - Tue, 24 Nov 2015 19:26:28 GMT
-      connection:
-      - close
-      transfer-encoding:
-      - chunked
-    body:
-      encoding: UTF-8
-      string: '{"preferences":{"general_contact":{"first_name":"Earthdata","last_name":"Search",
-              "email":"patrick+edsc@element84.com","organization":"EDSC","address":{"country":"United States"},
-              "phones":{"0":{"number":"0000000000","phone_number_type":"BUSINESS"}},"role":"Order
-              Contact"},"order_notification_level":"NONE"}}'
-    http_version:
-edsc_user_prefs:
-  response:
-    status:
-      code: 200
-      message:
-    headers:
-      server:
-      - Apache-Coyote/1.1
-      cache-control:
-      - no-cache
-      x-ua-compatible:
-      - IE=Edge,chrome=1
-      x-runtime:
-      - '0.229000'
-      content-type:
-      - application/json;charset=utf-8
-      vary:
-      - Accept-Encoding
-      date:
-      - Tue, 24 Nov 2015 19:26:28 GMT
-      connection:
-      - close
-      transfer-encoding:
-      - chunked
-    body:
-      encoding: UTF-8
-      string: '{"preferences":{"general_contact":{"first_name":"Earthdata","last_name":"Search",
-              "email":"patrick+edsc@element84.com","organization":"EDSC","address":{"country":"United States"},
-              "phones":{"0":{"number":"0000000000","phone_number_type":"BUSINESS"}},"role":"Order
-              Contact"},"order_notification_level":"NONE"}}'
-    http_version:
-edscbasic_preferences:
-  response:
-    status:
-      code: 401
-      message:
-    headers:
-      server:
-      - Apache-Coyote/1.1
-      cache-control:
-      - no-cache
-      x-ua-compatible:
-      - IE=Edge,chrome=1
-      x-runtime:
-      - '0.229000'
-      content-type:
-      - application/json;charset=utf-8
-      vary:
-      - Accept-Encoding
-      date:
-      - Tue, 24 Nov 2015 19:26:28 GMT
-      connection:
-      - close
-      transfer-encoding:
-      - chunked
-    body:
-      encoding: UTF-8
-      string: '{"errors":["User does not have the required security identifiers for the requested operation."]}'
-    http_version:
 0a02d564986dee8b88b72b36380ff495d8d4e1c0:
   response:
     status:
@@ -1175,6 +1041,68 @@ edscbasic_preferences:
       string: '{"preferences":{"general_contact":{"first_name":"Earthdata","last_name":"Search","email":"patrick+edsc@element84.com","organization":"EDSC","address":{"country":"United States"},"phones":{"0":{"number":"0000000000","phone_number_type":"BUSINESS"}},"role":"Order Contact"},"order_notification_level":"NONE"}}'
     http_version:
 edsc_access_update_preferences_none:
+  response:
+    status:
+      code: 201
+      message:
+    headers:
+      server:
+      - Apache-Coyote/1.1
+      cache-control:
+      - no-cache
+      x-ua-compatible:
+      - IE=Edge,chrome=1
+      set-cookie:
+      - _EchoRestRails_session=BAh7BiIPc2Vzc2lvbl9pZCIlYzliNWI2ODZlNWNmYzk2MjIxMzZlYjI3MDU0MDZmMmY%3D--ccab90e99f84e4ef2a742a3ed51d22dc16d545c0;
+        path=/; HttpOnly
+      x-runtime:
+      - '0.192000'
+      content-type:
+      - application/json;charset=utf-8
+      vary:
+      - Accept-Encoding
+      date:
+      - Tue, 24 Nov 2015 19:26:38 GMT
+      connection:
+      - close
+      transfer-encoding:
+      - chunked
+    body:
+      encoding: UTF-8
+      string: '{"preferences":{"general_contact":{"first_name":"Earthdata","last_name":"Search","email":"patrick+edsc@element84.com","organization":"EDSC","address":{"country":"United States"},"phones":{"0":{"number":"0000000000","phone_number_type":"BUSINESS"}},"role":"Order Contact"},"order_notification_level":"NONE"}}'
+    http_version:
+edsc_access_update_preferences_none_sit:
+  response:
+    status:
+      code: 201
+      message:
+    headers:
+      server:
+      - Apache-Coyote/1.1
+      cache-control:
+      - no-cache
+      x-ua-compatible:
+      - IE=Edge,chrome=1
+      set-cookie:
+      - _EchoRestRails_session=BAh7BiIPc2Vzc2lvbl9pZCIlYzliNWI2ODZlNWNmYzk2MjIxMzZlYjI3MDU0MDZmMmY%3D--ccab90e99f84e4ef2a742a3ed51d22dc16d545c0;
+        path=/; HttpOnly
+      x-runtime:
+      - '0.192000'
+      content-type:
+      - application/json;charset=utf-8
+      vary:
+      - Accept-Encoding
+      date:
+      - Tue, 24 Nov 2015 19:26:38 GMT
+      connection:
+      - close
+      transfer-encoding:
+      - chunked
+    body:
+      encoding: UTF-8
+      string: '{"preferences":{"general_contact":{"first_name":"Earthdata","last_name":"Search","email":"patrick+edsc@element84.com","organization":"EDSC","address":{"country":"United States"},"phones":{"0":{"number":"0000000000","phone_number_type":"BUSINESS"}},"role":"Order Contact"},"order_notification_level":"NONE"}}'
+    http_version:
+edsc_access_update_preferences_none_uat:
   response:
     status:
       code: 201
@@ -1294,7 +1222,7 @@ c56886b1aa890251bf223cc01d137a9a50876415:
             <Message>This collection is currently not configured for subagent HEG</Message>
         </eesi:Exception>
     http_version:
-f46ffc5e332ea287a3dd423cb533ad5e28bbc1d3:
+service_order_with_bad_bounding_box_post:
   response:
     status:
       code: 201
@@ -1328,129 +1256,7 @@ f46ffc5e332ea287a3dd423cb533ad5e28bbc1d3:
                 <contactEmail>nsidc@nsidc.org</contactEmail>
             </contactInformation>
             <processInfo>
-                <message>85720726:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720727:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720728:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720725:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720056:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720055:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720700:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85717340:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85717339:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85717341:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85714079:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85714080:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85714081:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85713711:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85713687:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85713671:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85712744:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85712742:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85712743:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85712745:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85708130:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85708136:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85708131:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85708129:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85707512:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85707464:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85707465:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85707430:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85707428:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720685:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704461:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704460:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85720683:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704462:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704129:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704115:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85704118:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698413:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698411:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698414:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698412:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698030:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698027:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698031:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85698029:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85697474:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85697475:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85697473:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85694302:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85694304:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85694305:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85694303:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85690368:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85690366:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85690367:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85689993:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85689995:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85689994:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85689988:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686531:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686532:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686534:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686533:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686535:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686216:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85686213:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682945:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682944:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682943:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682533:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682536:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85682535:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85681461:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85681464:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85681462:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85681463:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85674606:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85674605:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85674604:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85669517:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85669515:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85669516:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85669514:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85667316:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85667315:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85667314:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85667313:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85653448:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85653449:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85653450:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85649477:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85649478:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85649475:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85649476:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85647575:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85647573:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85647574:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85644771:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85644770:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85644768:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636780:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636782:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636783:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636781:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85638322:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636713:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85636714:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634448:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634449:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634447:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634446:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634267:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634269:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634266:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85634268:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630723:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630722:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630724:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630007:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630009:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630008:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85630006:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
-                <message>85629892:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
+                <message>97523972:NoMatchingData-Subsetting was unsuccessful; no output files were produced. No data found that matched the subset constraints.</message>
                 <processDuration>PT13.578S</processDuration>
                 <subagentId>SMAPL1L2</subagentId>
             </processInfo>
@@ -2165,4 +1971,30 @@ boundingbox1_2:
                 <totalNumber>1</totalNumber>
             </requestStatus>
         </eesi:agentResponse>
+    http_version:
+ous_healthcheck:
+  response:
+    status:
+      code: 200
+      message:
+    headers:
+      access-control-allow-origin:
+      - "*"
+      cmr-media-type:
+      - cmr-opendap.v2; format=*
+      content-type:
+      - application/json
+      date:
+      - Tue, 24 Jul 2018 00:58:32 GMT
+      server:
+      - nginx
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains;
+      content-length:
+      - '67'
+      connection:
+      - Close
+    body:
+      encoding: UTF-8
+      string: '{"config":{"ok?":true},"httpd":{"ok?":true},"logging":{"ok?":true}}'
     http_version:

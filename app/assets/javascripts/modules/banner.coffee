@@ -18,10 +18,7 @@
       $banner.addClass(options.className) if options.className?
       $banner.find('.banner-title').text(title) if title?
       $message = $banner.find('.banner-text')
-      if options.html
-        $message.html(message)
-      else
-        $message.text(message)
+      $message.text(message)
       $banner.data('banner.key', key)
       $('body').after($banner)
       # Do this in a timeout so the element has time to be placed in the DOM and animations can happen
@@ -66,12 +63,6 @@
   $(document).ajaxSend (event, xhr, settings) ->
     removeBannersWithKey(settings.url.split('?')[0])
 
-
-  $(document).on 'click', '.banner-ajax-retry', ->
-    {retry} = banners[0][3] if banners.length > 0
-    retry?()
-
-
   $(document).ajaxError (event, xhr, settings) ->
     if xhr.status? && (xhr.status >= 500 || xhr.status == 408 || xhr.status == 0) && xhr.statusText != 'abort'
       url = settings.url.split('?')[0]
@@ -81,9 +72,7 @@
         resource = resource.replace('_', ' ')
         title = "Error retrieving #{resource}"
       error = xhr.responseJSON?.errors?.error ? 'There was a problem completing the request'
-      retry = settings.retry
-      error += ' <a class="banner-ajax-retry" href="#">Retry</a>' if retry?
 
-      showBanner(url, title, error, className: 'banner-error', immediate: true, html: true, retry: retry)
+      showBanner(url, title, error, className: 'banner-error', immediate: true, html: true, retry: settings.retry)
 
   exports = showBanner

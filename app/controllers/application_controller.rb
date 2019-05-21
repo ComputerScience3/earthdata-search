@@ -1,8 +1,27 @@
 class ApplicationController < ActionController::Base
+  include AuthenticationUtils
+  include ClientUtils
+
   protect_from_forgery
 
-  before_filter :refresh_urs_if_needed, except: [:logout, :refresh_token]
-  before_filter :validate_portal
+  before_action :refresh_urs_if_needed, except: [:logout, :refresh_token]
+  before_action :validate_portal
+  before_action :migrate_user_data
+
+  # As of EDSC-2057 we are storing profile and preference information for the user in the
+  # database instead of storing parts of it in the session and continually asking for it.
+  # This method looks for a key that we previously stored in the session and uses it's value
+  # to pull and store the information we now retrieve when a user logs in. This method will
+  # ensure that users that were logged in before the deployment don't experience any issues.
+  def migrate_user_data
+    if logged_in? && session.key?(:user_name) && session[:user_name]
+      # Mocks the response from URS providing only the necessary keys to store the user data
+      store_user_data('endpoint' => "/api/users/#{session[:user_name]}")
+
+      # Remove this old value from the session
+      session.delete(:user_name)
+    end
+  end
 
   rescue_from Faraday::Error::TimeoutError, with: :handle_timeout
   rescue_from Faraday::Error::ConnectionFailed, with: :handle_connection_failed
@@ -13,39 +32,7 @@ class ApplicationController < ActionController::Base
     last_point || edsc_path(root_url)
   end
 
-
-  # DELETE ME: Portal debug
-  #before_filter :refresh_portals
-  #def refresh_portals
-  #  if Rails.env.development?
-  #    portals = YAML.load_file(Rails.root.join('config/portals.yml'))
-  #    Rails.configuration.portals = (portals[Rails.env.to_s] || portals['defaults']).with_indifferent_access
-  #    Rails.logger.info "REFRESH -> #{Rails.configuration.portals}.inspect"
-  #  end
-  #end
-
   protected
-
-  def echo_client
-    if @echo_client.nil?
-      service_configs = Rails.configuration.services
-      @echo_client = Echo::Client.client_for_environment(cmr_env, Rails.configuration.services)
-    end
-    @echo_client
-  end
-
-  def cmr_env
-    @cmr_env = session[:cmr_env] unless session[:cmr_env].nil?
-    @cmr_env ||= request.headers['edsc-echo-env'] || request.query_parameters['cmr_env']
-    if request.query_parameters['cmr_env'] && !(['sit', 'uat', 'prod', 'ops'].include? request.query_parameters['cmr_env'])
-      @cmr_env = Rails.configuration.cmr_env
-    else
-      @cmr_env ||= Rails.configuration.cmr_env || 'prod'
-    end
-    @cmr_env = 'prod' if @cmr_env == 'ops'
-    @cmr_env
-  end
-  helper_method :cmr_env
 
   def set_env_session
     session[:cmr_env] = nil
@@ -54,9 +41,7 @@ class ApplicationController < ActionController::Base
 
   def refresh_urs_if_needed
     current_user
-    if logged_in? && server_session_expires_in < 0
-      refresh_urs_token
-    end
+    refresh_urs_token if logged_in? && server_session_expires_in < 0
   end
 
   def refresh_urs_token
@@ -73,13 +58,11 @@ class ApplicationController < ActionController::Base
   end
 
   def handle_timeout
-    if request.xhr?
-      render json: {errors: {error: 'The server took too long to complete the request'}}, status: 504
-    end
+    render json: { errors: { error: 'The server took too long to complete the request' } }, status: :gateway_timeout if request.xhr?
   end
 
   def handle_connection_failed
-    render json: {errors: {error: 'Faraday::Error::ConnectionFailed: Likely SSL Certificate Failure'}}, status: 500
+    render json: { errors: { error: 'Faraday::Error::ConnectionFailed: Likely SSL Certificate Failure' } }, status: :internal_server_error
   end
 
   def token
@@ -87,19 +70,13 @@ class ApplicationController < ActionController::Base
   end
 
   def get_user_id
-    # Dont make a call to ECHO if user is not logged in
-    return session[:user_id] = nil unless token.present?
-
-    # Dont make a call to ECHO if we already know the user id
-    return session[:user_id] if session[:user_id]
+    return nil if token.blank?
 
     # Work around a problem where logging into sit from the test environment goes haywire
     # because of the way tokens are set up
     return 'edsc' if Rails.env.test? && cmr_env != 'prod'
 
-    response = echo_client.get_current_user(token).body
-    session[:user_id] = response["user"]["id"] if response["user"]
-    session[:user_id]
+    session[:echo_id]
   end
 
   @@user_lock = Mutex.new
@@ -115,23 +92,17 @@ class ApplicationController < ActionController::Base
     @current_user
   end
 
-  def earthdata_username
-    session[:user_name]
-  end
-
   def clear_session
-    store_oauth_token()
-    session[:user_id] = nil
-    session[:user_name] = nil
+    store_oauth_token
   end
 
-  def store_oauth_token(json={})
+  def store_oauth_token(json = {})
     json ||= {}
-    session[:access_token] = json["access_token"]
-    session[:refresh_token] = json["refresh_token"]
-    session[:expires_in] = json["expires_in"]
-    session[:user_name] = json['endpoint'].gsub('/api/users/', '') if json['endpoint']
-    session[:logged_in_at] = json.empty? ? nil : Time.now.to_i
+
+    session[:access_token]  = json['access_token']
+    session[:refresh_token] = json['refresh_token']
+    session[:expires_in]    = json['expires_in']
+    session[:logged_in_at]  = json.empty? ? nil : Time.now.to_i
   end
 
   def logged_in_at
@@ -157,17 +128,26 @@ class ApplicationController < ActionController::Base
 
   def logged_in?
     logged_in = session[:access_token].present? &&
-          session[:refresh_token].present? &&
-          session[:expires_in].present? &&
-                session[:logged_in_at]
+                session[:refresh_token].present? &&
+                session[:expires_in].present? &&
+                session[:logged_in_at].present?
+
     if Rails.env.development?
       Rails.logger.info "Access: #{session[:access_token]}"
       Rails.logger.info "Refresh: #{session[:refresh_token]}"
     end
+
     store_oauth_token() unless logged_in
     logged_in
   end
   helper_method :logged_in?
+
+  # Tokens are not necessary for creating/updating EDSC objects which is all that
+  # happens via JSON so we're not going to require the user to be authenticated here
+  # (This would also require the user be authenticated on the search page, which is undesireable)
+  def json_request?
+    request.format.json?
+  end
 
   def server_session_expires_in
     logged_in? ? (expires_in - SERVER_EXPIRATION_OFFSET_S).to_i : 0
@@ -243,5 +223,4 @@ class ApplicationController < ActionController::Base
     end
     Rails.logger.info "#{params[:controller].singularize}##{action} request took #{(time.to_f * 1000).round(0)} ms"
   end
-
 end

@@ -1,20 +1,10 @@
-require 'spec_helper'
+require 'rails_helper'
 
-describe 'Collection API Endpoints', reset: false do
+describe 'Collection API Endpoints' do
   context 'when viewing the collection details for a collection with granules' do
     before :all do
-      load_page '/search', env: :sit
-      wait_for_xhr
-      click_link "Temporal"
-      fill_in "Start", with: "1985-12-01 00:00:00\t\t"
-      js_click_apply ".temporal-dropdown"
-      wait_for_xhr
-
-      fill_in 'keywords', with: 'C1000000257-DEV07'
-      wait_for_xhr
-      click_link "View collection details"
-      wait_for_xhr
-      click_link 'API Endpoints'
+      load_page :collection_details, env: :sit, focus: 'C1000000257-DEV07', temporal: ['1985-12-01T00:00:00Z']
+      click_on 'For developers'
     end
 
     it 'provides a link to the CMR API for the collections granules' do
@@ -24,12 +14,8 @@ describe 'Collection API Endpoints', reset: false do
 
   context 'when viewing the collection details for a collection with GIBS' do
     before :all do
-      load_page :search, env: :sit
-      fill_in 'keywords', with: 'C24936-LAADS'
-      wait_for_xhr
-      click_link "View collection details"
-      wait_for_xhr
-      click_link 'API Endpoints'
+      load_page :collection_details, env: :sit, focus: 'C24936-LAADS'
+      click_on 'For developers'
     end
 
     it 'provides the path to the GIBS endpoint' do
@@ -44,7 +30,8 @@ describe 'Collection API Endpoints', reset: false do
 
   context 'when viewing the collection details for a collection with OPeNDAP' do
     before :all do
-      load_page '/search/collection-details', focus: 'C1214305813-AU_AADC', ac: true
+      Capybara.reset_sessions!
+      load_page :collection_details, focus: 'C1214305813-AU_AADC', ac: true
       click_on 'View All Related URLs'
     end
 
@@ -55,28 +42,21 @@ describe 'Collection API Endpoints', reset: false do
     end
   end
 
+  # collection is gone
   context 'when viewing the collection details for a collection with MODAPS WCS' do
     before :all do
-      load_page :search
-      fill_in 'keywords', with: 'C1219032686-LANCEMODIS'
-      wait_for_xhr
-      click_link "View collection details"
-      wait_for_xhr
-      click_link 'API Endpoints'
+      load_page :collection_details, ac: true, focus: 'C190733713-LPDAAC_ECS'
+      click_on 'For developers'
     end
 
     it 'provides the path to the MODAPS WCS endpoint' do
-      expect(collection_details).to have_css('a[href="http://modwebsrv.modaps.eosdis.nasa.gov/wcs/5/MYD04_L2/getCapabilities?service=WCS&version=1.0.0&request=GetCapabilities"]')
+      expect(collection_details).to have_css('a[href="http://modwebsrv.modaps.eosdis.nasa.gov/wcs/5/MCD12Q2/getCapabilities?service=WCS&version=1.0.0&request=GetCapabilities"]')
     end
   end
 
   context 'when viewing the collection details for a collection without granules, GIBS, or OPeNDAP' do
     before :all do
-      load_page :search
-      fill_in 'keywords', with: 'C179001887-SEDAC'
-      wait_for_xhr
-      click_link "View collection details"
-      wait_for_xhr
+      load_page :collection_details, focus: 'C179001887-SEDAC'
     end
 
     it 'does not provide a link to the CMR API for granules' do

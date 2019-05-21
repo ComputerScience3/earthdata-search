@@ -1,43 +1,47 @@
 this.edsc.util.metrics = do ->
 
   createPageView: (path, state) ->
-    if ga?
-      # set custom dimensions to track other stuff
-      # Dimension 1, keyword search
-      ga('set', 'dimension1', if state.free_text? then state.free_text.toLowerCase() else null)
+    if dataLayer?
+      # Set custom dimensions to track other stuff
+      # Dimensions 1-10 are reserved for dimensions designated by the global ESDIS Google Tag Manager container
 
-      # Dimension 2, spatial type
+      # Dimension 11, keyword search
+      dimension11 = if state.free_text? then state.free_text.toLowerCase() else null
+
+      # Dimension 12, spatial type
       spatial = null
       spatial = 'Bounding Box' if state.bounding_box?
       spatial = 'Polygon' if state.polygon?
       spatial = 'Point' if state.point?
-      ga('set', 'dimension2', spatial)
 
-      # Dimension 3, temporal type
+      dimension12 = spatial
+
+      # Dimension 13, temporal type
       temporal = null
       if state.temporal?
         if state.temporal.split(',').length > 2
           temporal = 'Recurring Temporal'
         else
           temporal = 'Standard Temporal'
-      ga('set', 'dimension3', temporal)
+      dimension13 = temporal
 
-      # Dimension 4, collections viewed
-      # Dimension 5, collections added to project
-      d4 = null
-      d5 = null
+      # Dimension 14, collections viewed
+      # Dimension 15, collections added to project
+      collectionsViewed = null
+      collectionsAdded = null
       if state.p?
         collectionIds = state.p.split('!')
         for id, index in collectionIds
           if id.length > 0
             if index == 0
-              d4 = id
+              collectionsViewed = id
             else
-              d5 = id
-      ga('set', 'dimension4', d4)
-      ga('set', 'dimension5', d5)
+              collectionsAdded = id
 
-      # Dimension 6, Search facets
+      dimension14 = collectionsViewed
+      dimension15 = collectionsAdded
+
+      # Dimension 16, Search facets
       facet_names = ['category', 'features', 'data_center', 'project', 'platform', 'instrument', 'processing_level_id']
       facets = []
       for name in facet_names when state[name]?
@@ -48,53 +52,120 @@ this.edsc.util.metrics = do ->
         for name in keyword_names when state.science_keywords[0][name]?
           facets.push("#{name}/#{value}") for value in state.science_keywords[0][name]
 
-      ga('set', 'dimension6', if facets.length > 0 then facets.join(' ') + ' ' else null)
+      dimension16 = if facets.length > 0 then facets.join(' ') + ' ' else null
 
-
-      # Send the page view
-      ga('send', 'pageview', path)
+      dataLayer.push({
+        'event': 'virtualPageView',
+        'dimension11': dimension11, # Keyword Search
+        'dimension12': dimension12, # Spatial
+        'dimension13': dimension13, # Temporal
+        'dimension14': dimension14, # Collections Viewed
+        'dimension15': dimension15, # Collections Added
+        'dimension16': dimension16  # Search Facet
+      })
 
   createDataAccessEvent: (collection, options) ->
-    if ga?
-      # Dimension 7, Collection Accessed
-      ga('set', 'dimension7', collection)
+    if dataLayer?
+      # Dimension 17, Collection Accessed
+      dimension17 = collection
 
-      if options? # If options exist, it is completing data access
-        # Dimension 8, Access Options (Download, FTP_Pull, etc.)
+      # If options exist, it is completing data access
+      if options?
+
+        # Dimension 18, Access Options (Download, FTP_Pull, etc.)
+        # Dimension 19, Access Type (single_granule, order, esi, etc.)
         for accessMethod in options.accessMethod
-          ga('set', 'dimension8', accessMethod.method)
           opts = accessMethod.options
           subtype = accessMethod.type
           subtype = 'opendap' if accessMethod.subset?.parameters
           subtype = 'esi' if subtype == 'service'
-          ga('set', 'dimension9', subtype)
 
-          ga('send', 'event', 'Data Access', 'Completion', 'Data Access Completion', 1)
+          dimension18 = accessMethod.method
+          dimension19 = subtype
+
+          dataLayer.push({
+            'event': 'dataAccess',
+            'dimension17': dimension17, # Collection
+            'dimension18': dimension18, # Access Options
+            'dimension19': dimension19, # Subtype
+            'dataAccessCategory': 'Data Access',
+            'dataAccessAction': 'Completion',
+            'dataAccessLabel': 'Data Access Completion',
+            'dataAccessValue': 1
+          })
+
       else
-        ga('send', 'event', 'Data Access', 'Initiation', 'Data Access Initiation', 1)
+        dataLayer.push({
+          'event': 'dataAccess',
+          'dimension17': dimension17, # Collection
+          'dimension18': null, # Access Options
+          'dimension19': null, # Subtype
+          'dataAccessCategory': 'Data Access',
+          'dataAccessAction': 'Initiation',
+          'dataAccessLabel': 'Data Access Initiation',
+          'dataAccessValue': 1
+        })
 
-      # Ensure dimensions don't get set for any other tracking
-      ga('set', 'dimension7', null)
-      ga('set', 'dimension8', null)
+      dataLayer.push({
+        'dimension17': null, # Keyword Search
+        'dimension18': null, # Spatial
+        'dimension19': null, # Subtype
+      })
 
-  createEvent: (e) ->
-    if ga?
+  createDefaultClickEvent: (e) ->
+    if dataLayer?
       title = e.currentTarget.title
-      ga('send', 'event', 'button', 'click', title) if title?
+
+      # TODO: The variables passed along here should be reviewed. We can probably
+      # be a little more informative as to what is being clicked. For example,
+      # no distiction is made as to the element type, and we get no informative
+      # value if a title attribute is not set.
+      dataLayer.push({
+        'event': 'defaultClick',
+        'defaultClickCategory': 'button',
+        'defaultClickAction': 'click',
+        'defaultClickLabel': title
+      })
 
   createTimelineEvent: (label) ->
-    ga('send', 'event', 'button', 'click', "Timeline #{label}") if ga?
+    if dataLayer?
+      dataLayer.push({
+        'event': 'timeline',
+        'timelineEventCategory': 'button',
+        'timelineEventAction': 'click',
+        'timelineEventLabel': "Timeline #{label}"
+      })
+
 
   createMapEvent: (label) ->
-    ga('send', 'event', 'button', 'click', "Map #{label}") if ga?
+    if dataLayer?
+      dataLayer.push({
+        'event': 'map',
+        'mapEventCategory': 'button',
+        'mapEventAction': 'click',
+        'mapEventLabel': "Map #{label}"
+      })
 
   createTiming: (path, time) ->
-    ga('send', 'timing', 'ajax', path, time) if ga?
+    if dataLayer?
+      dataLayer.push({
+        'event': 'timing',
+        'timingEventCategory': 'ajax',
+        'timingEventVar': path,
+        'timingEventValue': time
+      })
 
   createMapEdit: (preBounds, postBounds, type) ->
-    if ga? && preBounds?.length == postBounds?.length
+    if dataLayer? && preBounds?.length == postBounds?.length
       distanceSum = 0
       for p0, i in preBounds
         p1 = postBounds[i]
         distanceSum += p0.distanceTo(p1)
-      ga('send', 'event', 'Spatial Edit', type, '', Math.round(distanceSum))
+
+      dataLayer.push({
+        'event': 'spatialEdit',
+        'spatialEditEventCategory': 'Spatial Edit',
+        'spatialEditEventAction': type,
+        'spatialEditEventLabel': '',
+        'spatialEditEventValue': Math.round(distanceSum),
+      })

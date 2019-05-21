@@ -5,7 +5,7 @@ ns.ProjectionSwitcher = do (L) ->
 
   ProjectionSwitcher = L.Control.extend
     options:
-      position: 'topright'
+      position: 'bottomright'
 
     initialize: (options={}) ->
       L.Control.prototype.initialize.call(this, options);
@@ -28,7 +28,7 @@ ns.ProjectionSwitcher = do (L) ->
         e.preventDefault()
         e.stopPropagation()
         newProjection = this.href.split('#')[1]
-        edscMap.setProjection(newProjection)
+        edscMap.setProjection(newProjection, true)
 
       map.on 'projectionchange', (e) ->
         self.setProjection e.projection
@@ -40,7 +40,7 @@ ns.ProjectionSwitcher = do (L) ->
 
     setProjection: (proj) ->
       $root = @$root
-      $link = @$root.children("[href=##{proj}]")
+      $link = @$root.children("[href=\\##{proj}]")
 
       $link.siblings().removeClass('leaflet-disabled')
       $link.addClass('leaflet-disabled')

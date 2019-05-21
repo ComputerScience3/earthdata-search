@@ -29,6 +29,11 @@ EarthdataSearchClient::Application.configure do
     VCR.configure { |c| VCR::EDSCConfigurer.configure(c, record: :none) }
   end
 
+  # Analytics
+  # Uncomment the config.analytics_id to enable the development Google Analytics tracking
+  # config.analytics_id = 'UA-50960810-4'
+  config.tag_manager_id = 'GTM-WNP7MLF'
+
   config.logo_name = "DEV"
   config.env_name = "[DEV]"
   # UAT Tophat
@@ -36,7 +41,7 @@ EarthdataSearchClient::Application.configure do
   config.feedback_url = 'https://fbm.earthdata.nasa.gov/for/EDSC-SIT/feedback.js'
 
   config.url_limit = 500
-  #config.cmr_env = 'sit'
+  config.cmr_env = 'sit'
 
   # This is also the client ID sent to OpenSearch. It is kept the same since the OpenSearch endpoint ultimately
   # talks to ECHO/CMR.

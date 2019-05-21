@@ -29,5 +29,9 @@ module Echo
     def status
       @response.status
     end
+
+    def errors
+      Array.wrap(body['errors']) || []
+    end
   end
 end

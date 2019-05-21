@@ -1,28 +1,11 @@
 # EDSC-15 As a user, I want to search for collections by simple temporal date
 #         range so that I may limit my results the relevant time span
 
-require "spec_helper"
+require 'rails_helper'
 
 describe "Temporal" do
   before :each do
     load_page :search
-  end
-
-  after :each do
-    reset_search
-  end
-
-  context 'When opening the temporal dropdown, and then opening the spatial dropdown' do
-    before :all do
-      load_page :search
-      click_link "Temporal"
-      expect(page).to have_content("Start")
-      click_link "Spatial"
-    end
-
-    it 'closes the temporal dropdown' do
-      expect(page).to have_no_content("Start")
-    end
   end
 
   context "range selection" do
@@ -30,17 +13,13 @@ describe "Temporal" do
       click_link "Temporal"
       fill_in "Start", with: "2013-12-01 00:00:00\t"
       js_click_apply ".temporal-dropdown"
-
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
-      expect(page).to have_content("ABoVE: Burn Severity, Fire Progression, Landcover and Field Data, NWT, Canada, 2014")
+      expect(page).to have_content("Start: 2013-12-01 00:00:00")
     end
 
     it "allows the user to search up to the end date time" do
       click_link "Temporal"
       fill_in "End", with: "1970-12-01 00:00:00\t"
       js_click_apply ".temporal-dropdown"
-
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
 
       expect(page).to have_content("Stop: 1970-12-01 00:00:00")
     end
@@ -51,27 +30,38 @@ describe "Temporal" do
       fill_in "End", with: "1975-12-01 00:00:00\t"
       js_click_apply ".temporal-dropdown"
 
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
-
       expect(page).to have_content("Start: 1975-12-01 00:00:00")
       expect(page).to have_content("Stop: 1975-12-01 00:00:00")
     end
 
     it "allows the user to clear the date time range" do
-      click_link "Temporal"
-      fill_in "Start", with: "1978-12-01 00:00:00\t"
-      fill_in "End", with: "1979-12-01 00:00:00\t"
-      js_click_apply ".temporal-dropdown"
+      # Determine how many collections are loaded before applying any filters
+      collections_without_temporal = find('h2.master-overlay-tab-title strong').text
 
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
+      click_link 'Temporal'
+      fill_in 'Start', with: "1978-12-01 00:00:00\t"
+      fill_in 'End', with: "1979-12-01 00:00:00\t"
+      js_click_apply '.temporal-dropdown'
+
+      wait_for_xhr
+
+      # Determine how many collections appears now that the
+      # temporal filter is applied
+      collections_with_temporal = find('h2.master-overlay-tab-title strong').text
+
+      # Ensure that the filter has been applied
+      expect(collections_without_temporal).to be > collections_with_temporal
 
       js_click_temporal
       js_click_clear
 
-      expect(page).to have_content("15 Minute Stream Flow Data: USGS (FIFE)")
+      wait_for_xhr
 
-      expect(page).to have_no_content("Start: 1978-12-01 00:00:00")
-      expect(page).to have_no_content("Stop: 1979-12-01 00:00:00")
+      collections_without_temporal_after_clear = find('h2.master-overlay-tab-title strong').text
+      expect(collections_without_temporal_after_clear).to eq(collections_without_temporal)
+
+      expect(page).to have_no_content('Start: 1978-12-01 00:00:00')
+      expect(page).to have_no_content('Stop: 1979-12-01 00:00:00')
     end
 
     it "validates incorrect user input" do
@@ -94,36 +84,53 @@ describe "Temporal" do
       page.execute_script(script)
       js_click_apply ".temporal-dropdown"
 
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
-
       expect(page).to have_content("Start: 12-01 00:00:00")
       expect(page).to have_content("Stop: 12-31 00:00:00")
       expect(page).to have_content("Range: 1970 - 1975")
     end
 
-    it "allows the user to clear the recurring date time search" do
-      click_link "Temporal"
-      js_check_recurring "collection"
-      fill_in "Start", with: "12-01 00:00:00\t"
-      fill_in "End", with: "12-31 00:00:00\t"
-      script = "edsc.page.query.temporal.pending.years([1970, 1975])"
+    it 'allows the user to clear the recurring date time search' do
+      # Determine how many collections are loaded before applying any filters
+      collections_without_temporal = find('h2.master-overlay-tab-title strong').text
+
+      # Click the Temporal filter dropdown and apply temporal values
+      click_link 'Temporal'
+      js_check_recurring 'collection'
+      fill_in 'Start', with: "12-01 00:00:00\t"
+      fill_in 'End', with: "12-31 00:00:00\t"
+
+      # Sets the 'Year Range'
+      script = 'edsc.page.query.temporal.pending.years([1970, 1975])'
       page.execute_script(script)
-      js_click_apply ".temporal-dropdown"
 
-      expect(page).to have_no_content("15 Minute Stream Flow Data: USGS (FIFE)")
+      # Apply the fitlers
+      js_click_apply '.temporal-dropdown'
 
-      expect(page).to have_content("Start: 12-01 00:00:00")
-      expect(page).to have_content("Stop: 12-31 00:00:00")
-      expect(page).to have_content("Range: 1970 - 1975")
+      wait_for_xhr
 
+      # Determine how many collections appears now that the
+      # temporal filter is applied
+      collections_with_temporal = find('h2.master-overlay-tab-title strong').text
+
+      # Ensure that the filter has been applied
+      expect(collections_without_temporal).to be > collections_with_temporal
+
+      expect(page).to have_content('Start: 12-01 00:00:00')
+      expect(page).to have_content('Stop: 12-31 00:00:00')
+      expect(page).to have_content('Range: 1970 - 1975')
+
+      # Display the Temporal dropdown, and clear its values
       js_click_temporal
       js_click_clear
 
-      expect(page).to have_content("15 Minute Stream Flow Data: USGS (FIFE)")
+      wait_for_xhr
 
-      expect(page).to have_no_content("Start: 12-01 00:00:00")
-      expect(page).to have_no_content("Stop: 12-31 00:00:00")
-      expect(page).to have_no_content("Range: 1970 - 1975")
+      collections_without_temporal_after_clear = find('h2.master-overlay-tab-title strong').text
+      expect(collections_without_temporal_after_clear).to eq(collections_without_temporal)
+
+      expect(page).to have_no_content('Start: 12-01 00:00:00')
+      expect(page).to have_no_content('Stop: 12-31 00:00:00')
+      expect(page).to have_no_content('Range: 1970 - 1975')
     end
 
     it "validates incorrect user input" do
@@ -142,6 +149,5 @@ describe "Temporal" do
 
       expect(page).to have_content("Start and End dates must both be selected")
     end
-
   end
 end

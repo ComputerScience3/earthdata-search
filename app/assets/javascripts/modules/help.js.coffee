@@ -9,6 +9,13 @@ ns = @edsc.models.page
 
 
   tourOptions =
+    shapefile_reduction:
+        once: true
+        title: "Shape file has too many points"
+        content: "To improve search performance, your shapefile has been simplified.
+          Your original shapefile will be used for spatial subsetting if you choose
+          to enable that setting during download."
+
     tour_end:
       title: 'Tour Ended'
       element: '#main-toolbar h1 a'
@@ -67,13 +74,27 @@ ns = @edsc.models.page
       content: '<p>Refine your search further with available facets, such as:
                   <div class="tour-list">
                     <ul class="bullet-list">
-                      <li>Features - has map imagery, is near-real-time, or is subsettable</li>
-                      <li>Keywords - science terms describing collections</li>
-                      <li>Platforms - satellite, aircraft, etc. hosting Instruments</li>
-                      <li>Instruments - devices that make measurements</li>
-                      <li>Organizations - responsible for archiving and/or producing data</li>
-                      <li>Projects - mission or science project</li>
-                      <li>Processing Levels - raw, geophysical variables, grid, or model</li>
+                      <li>
+                        <span class="tour-list-title">Features</span> - has map imagery, is near-real-time, or is subsettable
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Keywords</span> - science terms describing collections
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Platforms</span> - satellite, aircraft, etc. hosting Instruments
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Instruments</span> - devices that make measurements
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Organizations</span> - responsible for archiving and/or producing data
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Projects</span> - mission or science project
+                      </li>
+                      <li>
+                        <span class="tour-list-title">Processing Levels</span> - raw, geophysical variables, grid, or model
+                      </li>
                     </ul>
                   </div>
                 </p>'
@@ -88,22 +109,22 @@ ns = @edsc.models.page
                   <table><tr>
                     <td>
                       <ul class="icon-list">
-                        <li class="leaflet-draw-list"><i class="leaflet-draw-edit-remove"></i> Delete a layer</li>
-                        <li class="leaflet-draw-list"><i class="leaflet-draw-edit-edit"></i> Edit a layer</li>
-                        <li class="leaflet-draw-list"><i class="leaflet-draw-draw-marker"></i> Spatial coordinate search </li>
-                        <li class="leaflet-draw-list"><i class="leaflet-draw-draw-rectangle"></i> Bounding box search</li>
-                        <li class="leaflet-draw-list"><i class="leaflet-draw-draw-polygon"></i> Polygon search</li>
+                        <li class="leaflet-draw-list"><i class="icon-leaflet-draw-edit-remove"></i> Delete a layer</li>
+                        <li class="leaflet-draw-list"><i class="icon-leaflet-draw-edit-edit"></i> Edit a layer</li>
+                        <li class="leaflet-draw-list"><i class="icon-leaflet-draw-draw-marker"></i> Spatial coordinate search </li>
+                        <li class="leaflet-draw-list"><i class="icon-leaflet-draw-draw-rectangle"></i> Bounding box search</li>
+                        <li class="leaflet-draw-list"><i class="icon-leaflet-draw-draw-polygon"></i> Polygon search</li>
                       </ul>
                     </td>
                     <td>
                       <ul class="icon-list">
-                        <li class="projection-draw-list"><i class="projection-draw-arctic"></i> North Polar projection</li>
-                        <li class="projection-draw-list"><i class="projection-draw-geographic"></i> Geographic projection</li>
-                        <li class="projection-draw-list"><i class="projection-draw-antarctic"></i> South Polar projection</li>
+                        <li class="projection-draw-list"><i class="icon-projection-draw-arctic"></i> North Polar projection</li>
+                        <li class="projection-draw-list"><i class="icon-projection-draw-geographic"></i> Geographic projection</li>
+                        <li class="projection-draw-list"><i class="icon-projection-draw-antarctic"></i> South Polar projection</li>
                         <li class="zoom-draw-list"><i class="fa fa-fw fa-plus"></i> Zoom in </li>
                         <li class="zoom-draw-list"><i class="fa fa-fw fa-home"></i> Reset zoom </li>
                         <li class="zoom-draw-list"><i class="fa fa-fw fa-minus"></i> Zoom out </li>
-                        <li><i class="map-layers"></i> Map layers</li></ul>
+                        <li><i class="icon-map-layers"></i> Map layers</li></ul>
                     </td>
                   </tr></table>
                 </p>'
@@ -135,6 +156,7 @@ ns = @edsc.models.page
   defaultHelpOptions =
     placement: 'auto left'
     html: true
+    sanitize: false
     wait: true
     trigger: 'manual'
     template: defaultTemplate
@@ -255,6 +277,15 @@ ns = @edsc.models.page
     $('[id^="show-tour-"]').toggle(urlUtil.cleanPath()?.split('?')[0] in ["/search", "/", ""])
   $(document).on 'ready', ->
     $('[id^="show-tour-"]').toggle(urlUtil.cleanPath()?.split('?')[0] in ["/search", "/", ""])
+
+  # TL: We can probably find a nicer way to handle this. Currently, just hiding the menu based on
+  # scroll position. Until we look at scrolling behavior on non-full-page pages, this should work fine
+  $ ()->
+    $('.main-content-scrollable').on 'scroll', (e) ->
+      if ($(e.target).scrollTop() > 20)
+        $('.toolbar-secondary').hide()
+        return
+      $('.toolbar-secondary').show()
 
   add = (key, options={}) ->
     unless tourRunning
